@@ -8,14 +8,6 @@ Package structure was inspired by various templates and recommended best practic
 The `src` directory contains Python packages.
 Tests are placed under the `tests` directory, and documentation under the `docs` directory.
 
-To start your new project, you should change its name, URL and metadata details at:
-
-1. `README.md`
-2. `CHANGELOG.md`
-3. `setup.py`
-4. `tests/*.py`
-5. `src/*`
-
 ## Tooling
 
 This package sets up various `tox` environments for static checks, testing, building and publishing.
