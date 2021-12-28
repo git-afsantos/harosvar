@@ -24,6 +24,7 @@ import argparse
 import sys
 
 from harosvar import __version__ as current_version
+import harosvar.filesystem as fsys
 
 ###############################################################################
 # Argument Parsing
@@ -31,7 +32,7 @@ from harosvar import __version__ as current_version
 
 
 def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
-    msg = 'A short description of the project.'
+    msg = 'HAROSVar: Variability analysis of ROS applications.'
     parser = argparse.ArgumentParser(description=msg)
 
     parser.add_argument(
@@ -39,7 +40,10 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
     )
 
     parser.add_argument(
-        'args', metavar='ARG', nargs=argparse.ZERO_OR_MORE, help='An argument for the program.'
+        'paths',
+        metavar='SRC',
+        nargs=argparse.ZERO_OR_MORE,
+        help='Directories containing ROS packages. Defaults to the current directory.',
     )
 
     args = parser.parse_args(args=argv)
@@ -81,6 +85,9 @@ def do_real_work(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Configurations: {configs}')
     if args['version']:
         print(f'Version: {current_version}')
+        return
+    pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
+    print(pkgs)
 
 
 ###############################################################################
