@@ -12,8 +12,8 @@ from setuptools import find_packages, setup
 # Constants
 ###############################################################################
 
-PROJECT = 'bake-a-py'
-PYTHON_PKG = 'bakeapy'
+PROJECT = 'harosvar'
+PYTHON_PKG = 'harosvar'
 HERE = Path(__file__).parent
 
 ###############################################################################
