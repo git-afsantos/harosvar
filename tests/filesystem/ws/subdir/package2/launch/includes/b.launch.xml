@@ -1,0 +1,5 @@
+<launch>
+  <arg name="node_name" />
+
+  <node pkg="package2" type="node1" name="$(arg node_name)" />
+</launch>

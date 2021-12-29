@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="package1" type="node1" name="p1n1" />
+
+  <include file="$(find package2)/launch/includes/b.launch.xml">
+    <arg name="node_name" value="p2n1" />
+  </include>
+</launch>
