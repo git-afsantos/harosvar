@@ -9,11 +9,7 @@
 
 from errno import EACCES
 from pathlib import Path
-
-try:
-    from xmlrpc.client import Binary
-except ImportError:
-    from xmlrpclib import Binary
+from xmlrpc.client import Binary
 
 from haroslaunch.data_structs import STRING_TYPES
 from haroslaunch.launch_interpreter import LaunchInterpreter
@@ -105,7 +101,7 @@ def test_kobuki_minimal():
     assert node.name.full == '/mobile_base_nodelet_manager'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_minimal.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_minimal.launch'
     assert node.traceability.line == 4
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -127,7 +123,7 @@ def test_kobuki_minimal():
     assert node.name.full == '/mobile_base'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_minimal.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_minimal.launch'
     assert node.traceability.line == 5
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -151,7 +147,7 @@ def test_kobuki_minimal():
     assert node.name.full == '/diagnostic_aggregator'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_minimal.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_minimal.launch'
     assert node.traceability.line == 12
     assert node.traceability.column == 3
     assert node.package == 'diagnostic_aggregator'
@@ -213,7 +209,7 @@ def test_kobuki_minimal():
         assert p.namespace.full.startswith(('/mobile_base', '/diagnostic_aggregator'))
         assert p.system is None
         assert p.condition.is_true
-        assert p.traceability.filepath.endswith('/kobuki_minimal.launch')
+        assert Path(p.traceability.filepath).name == 'kobuki_minimal.launch'
         assert p.traceability.line in (6, 7, 13)
         assert p.traceability.column == 5
         assert p.value.value == params[p.name.full]
@@ -240,7 +236,7 @@ def test_kobuki_safe_keyop():
     assert node.name.full == '/cmd_vel_mux'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 5
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -263,7 +259,7 @@ def test_kobuki_safe_keyop():
     assert node.name.full == '/kobuki_safety_controller'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 10
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -304,7 +300,7 @@ def test_kobuki_safe_keyop():
     assert node.name.full == '/keyop_vel_smoother'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 17
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -338,7 +334,7 @@ def test_kobuki_safe_keyop():
     assert node.name.full == '/keyop'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 26
     assert node.traceability.column == 3
     assert node.package == 'kobuki_keyop'
@@ -357,7 +353,7 @@ def test_kobuki_safe_keyop():
     assert len(node.environment) == 0
     # Parameters ---------------------------
     params = {
-        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).parent / 'param' / 'keyop_mux.yaml'),
+        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).resolve().parent / 'param' / 'keyop_mux.yaml'),
         '/keyop_vel_smoother/speed_lim_v': 0.8,
         '/keyop_vel_smoother/speed_lim_w': 5.4,
         '/keyop_vel_smoother/accel_lim_v': 1.0,
@@ -374,7 +370,7 @@ def test_kobuki_safe_keyop():
         assert p.namespace.full.startswith(('/cmd_vel_mux', '/keyop'))
         assert p.system is None
         assert p.condition.is_true
-        assert p.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+        assert Path(p.traceability.filepath).name == 'kobuki_safe_keyop.launch'
         assert p.traceability.line in (6, 18, 29, 30, 31, 32, 33)
         assert p.traceability.column == 5
         assert p.value.value == params[p.name.full]
@@ -403,7 +399,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/mobile_base_nodelet_manager'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_minimal.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_minimal.launch'
     assert node.traceability.line == 4
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -425,7 +421,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/mobile_base'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_minimal.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_minimal.launch'
     assert node.traceability.line == 5
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -449,7 +445,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/diagnostic_aggregator'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_minimal.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_minimal.launch'
     assert node.traceability.line == 12
     assert node.traceability.column == 3
     assert node.package == 'diagnostic_aggregator'
@@ -471,7 +467,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/cmd_vel_mux'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 5
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -494,7 +490,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/kobuki_safety_controller'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 10
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -535,7 +531,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/keyop_vel_smoother'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 17
     assert node.traceability.column == 3
     assert node.package == 'nodelet'
@@ -569,7 +565,7 @@ def test_kobuki_minimal_safe_keyop():
     assert node.name.full == '/keyop'
     assert node.system is None
     assert node.condition.is_true
-    assert node.traceability.filepath.endswith('/kobuki_safe_keyop.launch')
+    assert Path(node.traceability.filepath).name == 'kobuki_safe_keyop.launch'
     assert node.traceability.line == 26
     assert node.traceability.column == 3
     assert node.package == 'kobuki_keyop'
@@ -628,7 +624,7 @@ def test_kobuki_minimal_safe_keyop():
         '/diagnostic_aggregator/analyzers/input_ports/timeout': 5.0,
         '/diagnostic_aggregator/analyzers/input_ports/contains': ['Digital Input', 'Analog Input'],
         '/diagnostic_aggregator/analyzers/input_ports/remove_prefix': 'mobile_base_nodelet_manager',
-        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).parent / 'param' / 'keyop_mux.yaml'),
+        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).resolve().parent / 'param' / 'keyop_mux.yaml'),
         '/keyop_vel_smoother/speed_lim_v': 0.8,
         '/keyop_vel_smoother/speed_lim_w': 5.4,
         '/keyop_vel_smoother/accel_lim_v': 1.0,
@@ -647,9 +643,7 @@ def test_kobuki_minimal_safe_keyop():
         )
         assert p.system is None
         assert p.condition.is_true
-        assert p.traceability.filepath.endswith(
-            ('/kobuki_minimal.launch', '/kobuki_safe_keyop.launch')
-        )
+        assert Path(node.traceability.filepath).name in ('kobuki_minimal.launch', 'kobuki_safe_keyop.launch')
         assert p.traceability.line in (6, 7, 13, 18, 29, 30, 31, 32, 33)
         assert p.traceability.column == 5
         assert p.value.value == params[p.name.full]

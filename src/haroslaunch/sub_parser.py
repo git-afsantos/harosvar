@@ -237,7 +237,7 @@ class _EvalSymbols(object):
         'false': False,
         'False': False,
         '__builtins__': {
-            k: getattr(__builtins__, k) for k in ('list', 'dict', 'map', 'str', 'float', 'int')
+            k: __builtins__[k] for k in ('list', 'dict', 'map', 'str', 'float', 'int')
         },
     }
 

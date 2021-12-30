@@ -11,6 +11,11 @@ from pathlib import Path
 import sys
 
 sys.modules['_elementtree'] = None
+
+# need the following for this hack to work in the testing environment
+if 'xml.etree.ElementTree' in sys.modules:
+    del sys.modules['xml.etree.ElementTree']
+
 import xml.etree.ElementTree as ElementTree  # noqa: E402
 
 from .data_structs import (  # noqa: E402
@@ -921,14 +926,14 @@ class LineNumberingParser(ElementTree.XMLParser):
     def _start(self, *args, **kwargs):
         # Here we assume the default XML parser which is expat
         # and copy its element position attributes into output Elements
-        element = super(self.__class__, self)._start(*args, **kwargs)
+        element = super()._start(*args, **kwargs)
         element._start_line_number = self.parser.CurrentLineNumber
         element._start_column_number = self.parser.CurrentColumnNumber + 1
         element._start_byte_index = self.parser.CurrentByteIndex
         return element
 
     def _end(self, *args, **kwargs):
-        element = super(self.__class__, self)._end(*args, **kwargs)
+        element = super()._end(*args, **kwargs)
         element._end_line_number = self.parser.CurrentLineNumber
         element._end_column_number = self.parser.CurrentColumnNumber + 1
         element._end_byte_index = self.parser.CurrentByteIndex
@@ -970,6 +975,7 @@ def parse(xml_text):
         raise LaunchParserError(e)
     if not xml_root.tag == 'launch':
         raise LaunchParserError.invalid_root(xml_root.tag)
+    assert hasattr(ElementTree.XMLParser, '_start'), dir(ElementTree.XMLParser)
     return _parse_tag(xml_root)
 
 
