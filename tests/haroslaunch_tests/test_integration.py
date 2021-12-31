@@ -27,13 +27,13 @@ class MockInterface(object):
 
     @property
     def ros_distro(self):
-        return 'melodic'
+        return 'noetic'
 
     def get_environment_variable(self, name):
         return self.env.get(name)
 
     def get_package_path(self, name):
-        return Path(__file__).parent
+        return str(Path(__file__).parent)
 
     def request_parse_tree(self, filepath):
         if isinstance(filepath, STRING_TYPES):
@@ -353,7 +353,7 @@ def test_kobuki_safe_keyop():
     assert len(node.environment) == 0
     # Parameters ---------------------------
     params = {
-        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).resolve().parent / 'param' / 'keyop_mux.yaml'),
+        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).parent) + '/param/keyop_mux.yaml',
         '/keyop_vel_smoother/speed_lim_v': 0.8,
         '/keyop_vel_smoother/speed_lim_w': 5.4,
         '/keyop_vel_smoother/accel_lim_v': 1.0,
@@ -624,7 +624,7 @@ def test_kobuki_minimal_safe_keyop():
         '/diagnostic_aggregator/analyzers/input_ports/timeout': 5.0,
         '/diagnostic_aggregator/analyzers/input_ports/contains': ['Digital Input', 'Analog Input'],
         '/diagnostic_aggregator/analyzers/input_ports/remove_prefix': 'mobile_base_nodelet_manager',
-        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).resolve().parent / 'param' / 'keyop_mux.yaml'),
+        '/cmd_vel_mux/yaml_cfg_file': str(Path(__file__).parent) + '/param/keyop_mux.yaml',
         '/keyop_vel_smoother/speed_lim_v': 0.8,
         '/keyop_vel_smoother/speed_lim_w': 5.4,
         '/keyop_vel_smoother/accel_lim_v': 1.0,
