@@ -637,13 +637,13 @@ def test_kobuki_minimal_safe_keyop():
         '/keyop/angular_vel_max': 6.6,
         '/keyop/wait_for_connection_': True,
     }
+    launch_files = ('kobuki_minimal.launch', 'kobuki_safe_keyop.launch')
+    namespaces = ('/mobile_base', '/cmd_vel_mux', '/keyop', '/diagnostic_aggregator')
     for p in lfi.parameters:
-        assert p.namespace.full.startswith(
-            ('/mobile_base', '/cmd_vel_mux', '/keyop', '/diagnostic_aggregator')
-        )
+        assert p.namespace.full.startswith(namespaces)
         assert p.system is None
         assert p.condition.is_true
-        assert Path(node.traceability.filepath).name in ('kobuki_minimal.launch', 'kobuki_safe_keyop.launch')
+        assert Path(node.traceability.filepath).name in launch_files
         assert p.traceability.line in (6, 7, 13, 18, 29, 30, 31, 32, 33)
         assert p.traceability.column == 5
         assert p.value.value == params[p.name.full]

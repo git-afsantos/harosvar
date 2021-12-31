@@ -44,10 +44,12 @@ from haroslaunch.sub_parser import (
 
 json_floats = floats(allow_nan=False, allow_infinity=False)
 
+
 def json_list_or_dict(children):
     s1 = lists(children, min_size=1, max_size=3)
     s2 = dictionaries(text(printable), children, min_size=1, max_size=3)
     return s1 | s2
+
 
 json = recursive(
     (none() | booleans() | json_floats | text(printable)),
