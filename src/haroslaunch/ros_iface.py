@@ -10,11 +10,7 @@
 from errno import EACCES
 import os
 from pathlib import Path
-
-try:
-    from xmlrpc.client import Binary
-except ImportError:
-    from xmlrpclib import Binary
+from xmlrpc.client import Binary
 
 from .launch_xml_parser import parse_from_file
 
@@ -30,7 +26,7 @@ class SimpleRosInterface(object):
 
     @property
     def ros_distro(self):
-        return os.environ.get('ROS_DISTRO', 'melodic')
+        return os.environ.get('ROS_DISTRO', 'noetic')
 
     def get_environment_variable(self, name):
         return os.environ.get(name)
@@ -72,12 +68,7 @@ class SimpleRosInterface(object):
             safe_dir = safe_dir or str(Path(os.environ.get('ROS_ROOT')).parent)
             if safe_dir and not filepath.startswith(safe_dir):
                 raise ValueError(filepath)
-        try:
-            return Path(filepath).read_text()
-        except AttributeError:  # Python 2
-            with open(filepath, 'r') as fh:
-                data = fh.read()
-            return data
+        return Path(filepath).read_text()
 
     def read_binary_file(self, filepath):
         filepath = str(filepath)
@@ -86,12 +77,7 @@ class SimpleRosInterface(object):
             safe_dir = safe_dir or str(Path(os.environ.get('ROS_ROOT')).parent)
             if safe_dir and not filepath.startswith(safe_dir):
                 raise ValueError(filepath)
-        try:
-            return Binary(Path(filepath).read_bytes()).data
-        except AttributeError:  # Python 2
-            with open(filepath, 'rb') as fh:
-                data = fh.read()
-            return Binary(data).data
+        return Binary(Path(filepath).read_bytes()).data
 
     def execute_command(self, cmd):
         raise EnvironmentError(EACCES, cmd)
