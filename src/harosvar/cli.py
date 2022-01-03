@@ -21,6 +21,7 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Dict, List, Optional
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -111,7 +112,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         for filepath in launch_files:
             lfi.interpret(Path(filepath))
         print('\nAnalysis Result:')
-        print(lfi.to_JSON_object())
+        print(json.dumps(lfi.to_JSON_object()))
 
 
 ###############################################################################
