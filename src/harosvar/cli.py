@@ -81,7 +81,11 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def shortcircuit(args: Dict[str, Any]) -> bool:
-    """Returns whether to end the program before a real command is run.
+    """
+    Run short-circuit commands given the right arguments.
+
+    :param args: [dict] of command line arguments.
+    :returns: [bool] whether to exit the program.
     """
     if args['version']:
         print(f'Version: {current_version}')
