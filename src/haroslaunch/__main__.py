@@ -1,11 +1,29 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
+"""
+Entrypoint module, in case you use `python -m <package>`.
+
+Why does this file exist, and why __main__? For more info, read:
+
+  - https://www.python.org/dev/peps/pep-0338/
+  - https://docs.python.org/2/using/cmdline.html#cmdoption-m
+  - https://docs.python.org/3/using/cmdline.html#cmdoption-m
+"""
+
+###############################################################################
+# Imports
+###############################################################################
+
 import sys
 
-from .main import main
+from haroslaunch.cli import main
 
-sys.exit(main())
+###############################################################################
+# Entry Point
+###############################################################################
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))  # pragma: no cover
