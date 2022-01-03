@@ -21,8 +21,11 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Dict, List, Optional
 
 import argparse
+from pathlib import Path
 import sys
 
+from haroslaunch.launch_interpreter import LaunchInterpreter
+from haroslaunch.ros_iface import SimpleRosInterface
 from harosvar import __version__ as current_version
 import harosvar.filesystem as fsys
 
@@ -93,11 +96,22 @@ def shortcircuit(args: Dict[str, Any]) -> bool:
     return False
 
 
-def do_real_work(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
+def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
     pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
-    print(pkgs)
+    ros_iface = SimpleRosInterface(strict=True, pkgs=pkgs)
+    for name, path in pkgs.items():
+        launch_files: List[str] = fsys.find_launch_xml_files(path)
+        joiner = '\n  * '
+        pretty = joiner.join(filepath for filepath in launch_files)
+        pretty = pretty or 'There are no launch files'
+        print(f'\nPackage {name}:{joiner}{pretty}')
+        lfi = LaunchInterpreter(ros_iface, include_absent=True)
+        for filepath in launch_files:
+            lfi.interpret(Path(filepath))
+        print('\nAnalysis Result:')
+        print(lfi.to_JSON_object())
 
 
 ###############################################################################
@@ -113,7 +127,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # Alternatively, set sane defaults if configuration is missing.
         config = load_configs(args)
         if not shortcircuit(args):
-            do_real_work(args, config)
+            workflow(args, config)
 
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
