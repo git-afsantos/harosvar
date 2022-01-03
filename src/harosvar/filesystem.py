@@ -63,6 +63,8 @@ def find_launch_xml_files(path: str) -> List[str]:
 
 
 def _find_packages_ros1(paths: List[str]) -> Dict[str, str]:
+    # paths: [list] of [str] file system path to search.
+    # returns: [dict] of [str] package -> [str] path.
     pkgs: Dict[str, str] = {}
     for path in paths:
         for root, subdirs, filenames in os.walk(path, topdown=True):
@@ -81,4 +83,6 @@ def _find_packages_ros1(paths: List[str]) -> Dict[str, str]:
 
 
 def _find_packages_ros2(paths: List[str]) -> Dict[str, str]:
+    # paths: [list] of [str] file system path to search.
+    # returns: [dict] of [str] package -> [str] path.
     return {}
