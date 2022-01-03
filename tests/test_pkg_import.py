@@ -6,6 +6,7 @@
 ###############################################################################
 
 import harosvar
+import haroslaunch
 
 ###############################################################################
 # Tests
@@ -20,3 +21,6 @@ def test_pkg_has_version():
     assert hasattr(harosvar, '__version__')
     assert isinstance(harosvar.__version__, str)
     assert harosvar.__version__ != ''
+    assert hasattr(haroslaunch, '__version__')
+    assert isinstance(haroslaunch.__version__, str)
+    assert haroslaunch.__version__ != ''
