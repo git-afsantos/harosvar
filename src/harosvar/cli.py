@@ -80,12 +80,18 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
 ###############################################################################
 
 
+def shortcircuit(args: Dict[str, Any]) -> bool:
+    """Returns whether to end the program before a real command is run.
+    """
+    if args['version']:
+        print(f'Version: {current_version}')
+        return True
+    return False
+
+
 def do_real_work(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
-    if args['version']:
-        print(f'Version: {current_version}')
-        return
     pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
     print(pkgs)
 
@@ -102,7 +108,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         # Load additional config files here, e.g., from a path given via args.
         # Alternatively, set sane defaults if configuration is missing.
         config = load_configs(args)
-        do_real_work(args, config)
+        if not shortcircuit(args):
+            do_real_work(args, config)
 
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
