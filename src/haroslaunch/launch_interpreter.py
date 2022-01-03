@@ -138,6 +138,8 @@ class LaunchInterpreter(object):
         self.parameters = []
         self.nodes = []
         self.machines = []
+        self.cmd_line_args = []  # [(file, {arg -> default})]
+        self.included_files = []
 
     def to_JSON_object(self):
         return {
@@ -145,6 +147,11 @@ class LaunchInterpreter(object):
             'nodes': [r.to_JSON_object() for r in self.nodes],
             'parameters': [r.to_JSON_object() for r in self.parameters],
             'machines': [m.to_JSON_object() for m in self.machines],
+            'args': [
+                [str(f), {n: v.to_JSON_object() if v else v for n, v in a.items()}]
+                for f, a in self.cmd_line_args
+            ],
+            'includes': [str(p) for p in self.included_files],
         }
 
     def interpret(self, filepath, args=None):
@@ -155,6 +162,7 @@ class LaunchInterpreter(object):
         tree.check_schema()
         args = dict(args) if args is not None else {}
         scope = LaunchScope(filepath, self.iface, args=args)
+        self.cmd_line_args.append((filepath, {}))
         self._interpret_tree(tree, scope)
         self.machines.extend(scope.machines.values())
 
@@ -214,6 +222,14 @@ class LaunchInterpreter(object):
                 self._fail(tag, scope, err)
         self._make_params(scope)
 
+    @property
+    def _current_cmd_line_args(self):
+        return self.cmd_line_args[-1][1]
+
+    @property
+    def _current_top_level_file(self):
+        return self.cmd_line_args[-1][0]
+
     def _arg_tag(self, tag, scope, condition):
         assert not tag.children
         if condition.is_false:
@@ -226,7 +242,10 @@ class LaunchInterpreter(object):
         if value is None:
             # declare arg (with default value if available)
             # `scope.get_arg()` works as intended with `None`
-            value = _literal_or_None(tag.resolve_default(scope))
+            value = tag.resolve_default(scope)
+            if scope.filepath == self._current_top_level_file:
+                self._current_cmd_line_args[name] = value
+            value = _literal_or_None(value)
             scope.declare_arg(name, default=value)
         else:
             # define arg with final value
@@ -406,6 +425,7 @@ class LaunchInterpreter(object):
             self._clear_params(new_scope.ns)
         self._interpret_tree(tag, new_scope)
         new_scope = new_scope.new_launch()
+        self.included_files.append(new_scope.filepath)
         tree = self.iface.request_parse_tree(filepath)  # !!
         assert tree.tag == 'launch'
         tree.check_schema()  # !!

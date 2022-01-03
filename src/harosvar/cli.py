@@ -21,7 +21,7 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Dict, List, Optional
 
 import argparse
-import json
+# import json
 from pathlib import Path
 import sys
 
@@ -102,17 +102,38 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Configurations: {configs}')
     pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
     ros_iface = SimpleRosInterface(strict=True, pkgs=pkgs)
+    all_launch_files = {}
+    included_files = set()
     for name, path in pkgs.items():
         launch_files: List[str] = fsys.find_launch_xml_files(path)
-        joiner = '\n  * '
-        pretty = joiner.join(filepath for filepath in launch_files)
-        pretty = pretty or 'There are no launch files'
-        print(f'\nPackage {name}:{joiner}{pretty}')
-        lfi = LaunchInterpreter(ros_iface, include_absent=True)
-        for filepath in launch_files:
-            lfi.interpret(Path(filepath))
-        print('\nAnalysis Result:')
-        print(json.dumps(lfi.to_JSON_object()))
+        print(f'\nPackage {name}:')
+        print(_bullets(launch_files))
+        for launch_file in launch_files:
+            filepath = Path(launch_file)
+            lfi = LaunchInterpreter(ros_iface, include_absent=True)
+            lfi.interpret(filepath)
+            included_files.update(lfi.included_files)
+            all_launch_files[launch_file] = lfi.to_JSON_object()
+    for filepath in included_files:
+        launch_file = str(filepath)
+        if launch_file in all_launch_files:
+            del all_launch_files[launch_file]
+    print('\nTop-level launch files:')
+    print(_bullets(all_launch_files))
+    # print(json.dumps(lfi.to_JSON_object()))
+
+
+###############################################################################
+# Helper Functions
+###############################################################################
+
+
+def _bullets(items: List[Any]):
+    if not items:
+        return '  (none)'
+    joiner = '\n  * '
+    text = joiner.join(str(item) for item in items)
+    return f'  * {text}'
 
 
 ###############################################################################
