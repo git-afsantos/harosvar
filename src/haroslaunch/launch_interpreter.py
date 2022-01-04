@@ -143,6 +143,7 @@ class LaunchInterpreter(object):
     def __init__(self, iface, include_absent=False):
         self.iface = iface
         self.include_absent = include_absent
+        self.launch_files = []
         self.rosparam_cmds = []
         self.parameters = []
         self.nodes = []
@@ -152,6 +153,7 @@ class LaunchInterpreter(object):
 
     def to_JSON_object(self):
         return {
+            'launch_files': [str(p) for p in self.launch_files],
             'rosparam': [c._asdict() for c in self.rosparam_cmds],
             'nodes': [r.to_JSON_object() for r in self.nodes],
             'parameters': [r.to_JSON_object() for r in self.parameters],
@@ -167,6 +169,7 @@ class LaunchInterpreter(object):
         # filepath is a str or pathlib.Path
         # log debug interpret(filepath, args=args)
         path = Path(filepath)
+        self.launch_files.append(path)
         tree = self.iface.request_parse_tree(path)
         assert tree.tag == 'launch'
         tree.check_schema()
@@ -181,6 +184,7 @@ class LaunchInterpreter(object):
         # log debug interpret_many(filepaths, args=args)
         for filepath in filepaths:
             path = Path(filepath)
+            self.launch_files.append(path)
             tree = self.iface.request_parse_tree(path)
             assert tree.tag == 'launch'
             tree.check_schema()
