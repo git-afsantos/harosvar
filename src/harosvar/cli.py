@@ -26,6 +26,7 @@ import sys
 from haroslaunch.launch_interpreter import LaunchInterpreter
 from haroslaunch.ros_iface import SimpleRosInterface
 from harosvar import __version__ as current_version
+import harosvar.analysis as ana
 import harosvar.filesystem as fsys
 
 ###############################################################################
@@ -101,7 +102,6 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
     ros_iface = SimpleRosInterface(strict=True, pkgs=pkgs)
     all_launch_files = {}
-    included_files = set()
     for name, path in pkgs.items():
         launch_files: List[str] = fsys.find_launch_xml_files(path)
         print(f'\nPackage {name}:')
@@ -109,26 +109,26 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         for launch_file in launch_files:
             lfi = LaunchInterpreter(ros_iface, include_absent=True)
             lfi.interpret(launch_file)
-            included_files.update(map(str, lfi.included_files))
-            all_launch_files[launch_file] = lfi.to_JSON_object()
-    for launch_file in included_files:
-        if launch_file in all_launch_files:
-            del all_launch_files[launch_file]
+            all_launch_files[launch_file] = lfi
+    top_level_files = ana.filter_top_level_files(all_launch_files)
     print('\nTop-level launch files:')
-    print(_bullets(all_launch_files))
-    for launch_file, data in all_launch_files.items():
+    print(_bullets(top_level_files))
+    compatibility = ana.list_compatible_files(top_level_files)
+    for launch_file, lfi in top_level_files.items():
         print(f'\n> File: {launch_file}')
-        assert len(data['args']) == 1
-        assert data['args'][0][0] == launch_file
-        args = data['args'][0][1]
+        assert len(lfi.cmd_line_args) == 1
+        assert str(lfi.cmd_line_args[0][0]) == launch_file
+        args = lfi.cmd_line_args[0][1]
         print('\nCommand-line <arg>:')
         print(_bullets(list(args.items())))
         print('\nList of <include> files:')
-        print(_bullets(data['includes']))
+        print(_bullets(list(map(str, lfi.included_files))))
         print('\nNodes:')
-        print(_bullets(_pretty_nodes(data['nodes'])))
+        print(_bullets(_pretty_nodes(lfi.nodes)))
         print('\nParams:')
-        print(_bullets(_pretty_params(data['parameters'])))
+        print(_bullets(_pretty_params(lfi.parameters)))
+        print('\nCompatible files:')
+        print(_bullets(compatibility[launch_file].items()))
     # print(json.dumps(lfi.to_JSON_object()))
 
 
@@ -145,17 +145,17 @@ def _bullets(items: List[Any]):
     return f'  * {text}'
 
 
-def _pretty_nodes(nodes: List[Dict[str, Any]]):
-    return [f"{n['name']} ({n['package']}/{n['executable']}) [{n['condition']}]" for n in nodes]
+def _pretty_nodes(nodes: List[Any]):
+    return [f'{n.name} ({n.package}/{n.executable}) [{n.condition}]' for n in nodes]
 
 
-def _pretty_params(params: List[Dict[str, Any]]):
+def _pretty_params(params: List[Any]):
     strings = []
     for p in params:
-        value = p['value']
+        value = p.value
         if value is not None:
-            value = value['value']
-        strings.append(f"{p['name']} ({p['param_type']}) = {value} [{p['condition']}]")
+            value = value.value
+        strings.append(f'{p.name} ({p.param_type}) = {value} [{p.condition}]')
     return strings
 
 

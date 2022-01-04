@@ -1,0 +1,9 @@
+<launch>
+  <arg name="node_type" default="node1" />
+
+  <node pkg="package1" type="$(arg node_type)" name="master" />
+
+  <include file="$(find package2)/launch/includes/c.launch.xml">
+    <arg name="node_name" value="slave" />
+  </include>
+</launch>
