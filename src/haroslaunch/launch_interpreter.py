@@ -7,7 +7,10 @@
 # Imports
 ###############################################################################
 
+from typing import Final, Iterable, Mapping, Union
+
 from collections import namedtuple
+from pathlib import Path
 
 from .data_structs import (
     STRING_TYPES,
@@ -31,6 +34,12 @@ from .sub_parser import (
     convert_value,
     resolve_to_yaml,
 )
+
+###############################################################################
+# Constants
+###############################################################################
+
+AnyPath: Final = Union[str, Path]
 
 ###############################################################################
 # Errors and Exceptions
@@ -154,27 +163,29 @@ class LaunchInterpreter(object):
             'includes': [str(p) for p in self.included_files],
         }
 
-    def interpret(self, filepath, args=None):
-        # filepath is a pathlib Path
+    def interpret(self, filepath: AnyPath, args: Mapping[str, str] = None):
+        # filepath is a str or pathlib.Path
         # log debug interpret(filepath, args=args)
-        tree = self.iface.request_parse_tree(filepath)
+        path = Path(filepath)
+        tree = self.iface.request_parse_tree(path)
         assert tree.tag == 'launch'
         tree.check_schema()
         args = dict(args) if args is not None else {}
-        scope = LaunchScope(filepath, self.iface, args=args)
-        self.cmd_line_args.append((filepath, {}))
+        scope = LaunchScope(path, self.iface, args=args)
+        self.cmd_line_args.append((path, {}))
         self._interpret_tree(tree, scope)
         self.machines.extend(scope.machines.values())
 
-    def interpret_many(self, filepaths, args=None):
-        # filepaths is a list of pathlib Path
+    def interpret_many(self, filepaths: Iterable[AnyPath], args: Mapping[str, str] = None):
+        # filepaths is a list of str or pathlib.Path
         # log debug interpret_many(filepaths, args=args)
         for filepath in filepaths:
-            tree = self.iface.request_parse_tree(filepath)
+            path = Path(filepath)
+            tree = self.iface.request_parse_tree(path)
             assert tree.tag == 'launch'
             tree.check_schema()
             args = dict(args) if args is not None else {}
-            scope = LaunchScope(filepath, self.iface, args=args)
+            scope = LaunchScope(path, self.iface, args=args)
             self._interpret_tree(tree, scope)
         # parameters can only be added in the end, because of rosparam
         # TODO
