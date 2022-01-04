@@ -18,7 +18,7 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import argparse
 import sys
@@ -128,7 +128,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print('\nParams:')
         print(_bullets(_pretty_params(lfi.parameters)))
         print('\nCompatible files:')
-        print(_bullets(compatibility[launch_file].items()))
+        print(_bullets(_pretty_compatibility(compatibility[launch_file].items())))
     # print(json.dumps(lfi.to_JSON_object()))
 
 
@@ -137,7 +137,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 ###############################################################################
 
 
-def _bullets(items: List[Any]):
+def _bullets(items: List[Any]) -> str:
     if not items:
         return '  (none)'
     joiner = '\n  * '
@@ -145,11 +145,11 @@ def _bullets(items: List[Any]):
     return f'  * {text}'
 
 
-def _pretty_nodes(nodes: List[Any]):
+def _pretty_nodes(nodes: List[Any]) -> List[str]:
     return [f'{n.name} ({n.package}/{n.executable}) [{n.condition}]' for n in nodes]
 
 
-def _pretty_params(params: List[Any]):
+def _pretty_params(params: List[Any]) -> List[str]:
     strings = []
     for p in params:
         value = p.value
@@ -157,6 +157,10 @@ def _pretty_params(params: List[Any]):
             value = value.value
         strings.append(f'{p.name} ({p.param_type}) = {value} [{p.condition}]')
     return strings
+
+
+def _pretty_compatibility(pairs: List[Tuple[str, Any]]) -> List[str]:
+    return [f'{launch_file} [{condition}]' for launch_file, condition in pairs]
 
 
 ###############################################################################
