@@ -457,7 +457,7 @@ class BaseScope(object):
             condition=condition,
             location=location,
         )
-        return NodeScope(
+        new_scope = NodeScope(
             node,
             self,
             self.iface,
@@ -467,6 +467,16 @@ class BaseScope(object):
             self.machines,
             self._machine,
         )
+        for param in self.fwd_params:
+            assert param.name.is_private
+            n = param.name.given
+            v = param.value
+            t = param.param_type
+            c = param.condition
+            ns = param.name.namespace
+            loc = param.traceability
+            new_scope.set_param(n, v, t, c, ns=ns, location=loc)
+        return new_scope
 
     def new_test(
         self,
