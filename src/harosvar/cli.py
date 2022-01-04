@@ -21,8 +21,6 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Dict, List, Optional
 
 import argparse
-# import json
-from pathlib import Path
 import sys
 
 from haroslaunch.launch_interpreter import LaunchInterpreter
@@ -148,8 +146,7 @@ def _bullets(items: List[Any]):
 
 
 def _pretty_nodes(nodes: List[Dict[str, Any]]):
-    return [f"{n['name']} ({n['package']}/{n['executable']}) [{n['condition']}]"
-            for n in nodes]
+    return [f"{n['name']} ({n['package']}/{n['executable']}) [{n['condition']}]" for n in nodes]
 
 
 def _pretty_params(params: List[Dict[str, Any]]):
