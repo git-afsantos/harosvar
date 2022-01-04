@@ -1,6 +1,6 @@
 <launch>
   <arg name="use_node2" default="false" />
-  <arg name="node2_param_value" />
+  <arg name="node2_y" />
 
   <param name="~x" type="double" value="1" />
 
@@ -11,6 +11,6 @@
   </include>
 
   <node pkg="package1" type="node2" name="p1n2" if="$(arg use_node2)">
-    <param name="param" type="double" value="$(arg node2_param_value)" />
+    <param name="y" type="double" value="$(arg node2_y)" />
   </node>
 </launch>
