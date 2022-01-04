@@ -109,17 +109,28 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(f'\nPackage {name}:')
         print(_bullets(launch_files))
         for launch_file in launch_files:
-            filepath = Path(launch_file)
             lfi = LaunchInterpreter(ros_iface, include_absent=True)
-            lfi.interpret(filepath)
-            included_files.update(lfi.included_files)
+            lfi.interpret(launch_file)
+            included_files.update(map(str, lfi.included_files))
             all_launch_files[launch_file] = lfi.to_JSON_object()
-    for filepath in included_files:
-        launch_file = str(filepath)
+    for launch_file in included_files:
         if launch_file in all_launch_files:
             del all_launch_files[launch_file]
     print('\nTop-level launch files:')
     print(_bullets(all_launch_files))
+    for launch_file, data in all_launch_files.items():
+        print(f'\n> File: {launch_file}')
+        assert len(data['args']) == 1
+        assert data['args'][0][0] == launch_file
+        args = data['args'][0][1]
+        print('\nCommand-line <arg>:')
+        print(_bullets(list(args.items())))
+        print('\nList of <include> files:')
+        print(_bullets(data['includes']))
+        print('\nNodes:')
+        print(_bullets(_pretty_nodes(data['nodes'])))
+        print('\nParams:')
+        print(_bullets(_pretty_params(data['parameters'])))
     # print(json.dumps(lfi.to_JSON_object()))
 
 
@@ -134,6 +145,21 @@ def _bullets(items: List[Any]):
     joiner = '\n  * '
     text = joiner.join(str(item) for item in items)
     return f'  * {text}'
+
+
+def _pretty_nodes(nodes: List[Dict[str, Any]]):
+    return [f"{n['name']} ({n['package']}/{n['executable']}) [{n['condition']}]"
+            for n in nodes]
+
+
+def _pretty_params(params: List[Dict[str, Any]]):
+    strings = []
+    for p in params:
+        value = p['value']
+        if value is not None:
+            value = value['value']
+        strings.append(f"{p['name']} ({p['param_type']}) = {value} [{p['condition']}]")
+    return strings
 
 
 ###############################################################################

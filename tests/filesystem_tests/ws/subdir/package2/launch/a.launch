@@ -1,7 +1,16 @@
 <launch>
+  <arg name="use_node2" default="false" />
+  <arg name="node2_param_value" />
+
+  <param name="~x" type="double" value="1" />
+
   <node pkg="package1" type="node1" name="p1n1" />
 
   <include file="$(find package2)/launch/includes/b.launch.xml">
     <arg name="node_name" value="p2n1" />
   </include>
+
+  <node pkg="package1" type="node2" name="p1n2" if="$(arg use_node2)">
+    <param name="param" type="double" value="$(arg node2_param_value)" />
+  </node>
 </launch>
