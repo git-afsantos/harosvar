@@ -5,7 +5,7 @@
     If parameter collision is enabled, parameter "z" collides with file
     'a.launch' if a value other than `true` is assigned.
   -->
-  <arg name="use_node2" default="false" />
+  <arg name="use_node2" />
   <arg name="z" default="false" />
 
   <param name="z" type="bool" value="$(arg z)" />

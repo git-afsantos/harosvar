@@ -1,5 +1,5 @@
 <launch>
-  <arg name="use_node2" default="false" />
+  <arg name="use_node2" />
   <arg name="node2_y" />
 
   <param name="z" type="bool" value="true" />

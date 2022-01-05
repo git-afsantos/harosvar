@@ -189,12 +189,12 @@ class LogicVariable(LogicValue):
         return self.name or self.text
 
     def __hash__(self):
-        return hash(self.text)
+        return hash(self.name)
 
     def __eq__(self, other):
         if not isinstance(other, LogicVariable):
             return False
-        return self.text == other.text
+        return self.name == other.name
 
 
 class LogicNot(LogicValue):
@@ -296,7 +296,7 @@ class LogicAnd(LogicValue):
         if len(self.operands) == 1:
             for x in self.operands:
                 return str(x)
-        return ' and '.join(str(x for x in self.operands))
+        return ' and '.join(str(x) for x in self.operands)
 
     def __hash__(self):
         return hash(self.operands)
@@ -363,7 +363,7 @@ class LogicOr(LogicValue):
         if len(self.operands) == 1:
             for x in self.operands:
                 return str(x)
-        return ' or '.join(str(x for x in self.operands))
+        return ' or '.join(str(x) for x in self.operands)
 
     def __hash__(self):
         return hash(self.operands)
