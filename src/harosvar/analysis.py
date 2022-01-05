@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Mapping
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping
 
 from collections import defaultdict
 
@@ -55,7 +55,7 @@ def list_compatible_files(
 
 
 ###############################################################################
-# Helper Functions
+# Helper Functions - Compatibility and Clashing
 ###############################################################################
 
 
@@ -89,82 +89,91 @@ def _compatible_condition(
 
 
 def _are_nodes_compatible(mine: List[Any], theirs: List[Any]) -> LogicValue:
-    c: LogicValue = LogicValue.T
-    for node in mine:
-        if node.condition.is_false:
-            continue
-        p = node.condition
-        q = _check_rosname_available(node.name, theirs)
-        r = p.implies(q).simplify()
-        if r.is_false:
-            return r
-        c = c.join(r)
-    return c.simplify()
+    return _resource_compatibility(mine, theirs)
 
 
 def _are_params_compatible(mine: List[Any], theirs: List[Any]) -> LogicValue:
+    checks = [_param_values_clash]
+    return _resource_compatibility(mine, theirs, checks=checks)
+
+
+def _resource_compatibility(
+    mine: List[Any],
+    theirs: List[Any],
+    checks: List[Callable[[Any, Any], LogicValue]] = None,
+) -> LogicValue:
     c: LogicValue = LogicValue.T
-    for param in mine:
-        if param.condition.is_false:
-            continue
-        p = param.condition
-        q = _check_rosname_available(param.name, theirs)
-        r = p.implies(q).simplify()
-        if r.is_false:
-            return r
-        c = c.join(r)
-    # FIXME: name collision is only relevant if the values are different.
+    for resource in _all_not_absent(mine):
+        p: LogicValue = resource.condition
+        for other, clashing in _rosname_clashes(resource, _all_not_absent(theirs)):
+            q = other.condition
+            # clashing only if both resources are present
+            clashing = clashing.join(p).join(q)
+            if checks:
+                for check in checks:
+                    clashing = clashing.join(check(resource, other))
+            clashing = clashing.simplify()
+            if clashing.is_true:
+                # incompatible, there is a clash
+                return LogicValue.F
+            c = c.join(clashing.negate())
     return c.simplify()
 
 
-def _check_rosname_available(rosname: RosName, resources: List[Any]) -> LogicValue:
-    c: LogicValue = LogicValue.T
-    if rosname.is_unknown:
+def _rosname_clashes(this: Any, resources: Iterable[Any]):
+    if this.name.is_unknown:
         for other in resources:
-            if other.condition.is_false:
-                continue
-            p = other.condition
             if other.name.is_unknown:
-                q = _check_rosname_two_unknown(rosname, other.name)
+                c = _var_equal(this.name, other.name)
             else:
-                q = _check_rosnames_one_unknown(other.name, rosname)
-            r = p.implies(q).simplify()
-            if r.is_false:
-                return r
-            c = c.join(r)
+                c = _rosname_unknown_similar(other.name, this.name)
+            yield (other, c)
     else:
         for other in resources:
-            if other.condition.is_false:
-                continue
-            p = other.condition
             if other.name.is_unknown:
-                q = _check_rosnames_one_unknown(rosname, other.name)
-                r = p.implies(q).simplify()
-                if r.is_false:
-                    return r
-                c = c.join(r)
-            elif rosname == other.name:
-                if p.is_true:
-                    return LogicValue.F
-                c = c.join(p.negate())
+                c = _rosname_unknown_similar(this.name, other.name)
+                yield (other, c)
+            elif this.name == other.name:
+                yield (other, LogicValue.T)
             else:
                 pass  # both known and different
-    return c.simplify()
 
 
-def _check_rosnames_one_unknown(rosname: RosName, unknown: RosName) -> LogicValue:
+def _rosname_unknown_similar(rosname: RosName, unknown: RosName) -> LogicValue:
     regex = unknown.to_regex()
     if regex.match(rosname.full):
-        text = f'{rosname} == {unknown}'
-        data = ('==', rosname, unknown)
-        return LogicVariable(text, data)
-    return LogicValue.T
+        return _var_equal(rosname, unknown)
+    return LogicValue.F
 
 
-def _check_rosname_two_unknown(one: RosName, other: RosName) -> LogicValue:
+def _all_not_absent(resources: List[Any]):
+    return filter(_is_not_absent, resources)
+
+
+def _is_not_absent(resource: Any):
+    return not resource.condition.simplify().is_false
+
+
+def _param_values_clash(param, other) -> LogicValue:
+    if param.param_type != other.param_type:
+        return LogicValue.T
+    if param.value.is_resolved:
+        if other.value.is_resolved:
+            if param.value.value != other.value.value:
+                return LogicValue.T
+            return LogicValue.F
+    return _var_equal(param.value, other.value)
+
+
+def _var_equal(one, other) -> LogicVariable:
     text = f'{one} == {other}'
     data = ('==', one, other)
     return LogicVariable(text, data)
+
+
+###############################################################################
+# Helper Functions - Nodelets
+###############################################################################
 
 
 def _loaded_nodelets(nodes: List[Any]) -> Dict[str, List[Any]]:

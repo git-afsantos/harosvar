@@ -113,7 +113,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     top_level_files = ana.filter_top_level_files(all_launch_files)
     print('\nTop-level launch files:')
     print(_bullets(top_level_files))
-    compatibility = ana.list_compatible_files(top_level_files)
+    compatibility = ana.list_compatible_files(top_level_files, params_collide=True)
     for launch_file, lfi in top_level_files.items():
         print(f'\n> File: {launch_file}')
         assert len(lfi.cmd_line_args) == 1

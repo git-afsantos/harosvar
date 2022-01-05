@@ -6,7 +6,7 @@
     'a.launch' if a value other than `true` is assigned.
   -->
   <arg name="use_node2" />
-  <arg name="z" default="false" />
+  <arg name="z" default="true" />
 
   <param name="z" type="bool" value="$(arg z)" />
 

@@ -310,7 +310,7 @@ class LogicAnd(LogicValue):
         if len(self.operands) == 1:
             for x in self.operands:
                 return str(x)
-        return ' and '.join(str(x) for x in self.operands)
+        return f"({' and '.join(str(x) for x in self.operands)})"
 
     def __hash__(self):
         return hash(self.operands)
@@ -381,7 +381,7 @@ class LogicOr(LogicValue):
         if len(self.operands) == 1:
             for x in self.operands:
                 return str(x)
-        return ' or '.join(str(x) for x in self.operands)
+        return f"({' or '.join(str(x) for x in self.operands)})"
 
     def __hash__(self):
         return hash(self.operands)
