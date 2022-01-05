@@ -39,6 +39,9 @@ class LogicValue(object):
     def is_or(self):
         return False
 
+    def negate(self):
+        return LogicNot(self)
+
     def join(self, value):
         if value.is_true:
             return self
@@ -57,6 +60,15 @@ class LogicValue(object):
             return value.disjoin(self)
         return LogicOr((self, value))
 
+    def implies(self, value):
+        # (p -> q) == (!p | q)
+        if value.is_true:
+            return value
+        neg = self.negate()
+        if value.is_false:
+            return neg
+        return value.disjoin(neg)
+
     def simplify(self):
         return self
 
@@ -68,11 +80,17 @@ class LogicTrue(LogicValue):
     def is_true(self):
         return True
 
+    def negate(self):
+        return LOGIC_FALSE
+
     def join(self, value):
         return value
 
     def disjoin(self, value):
         return self
+
+    def implies(self, value):
+        return value
 
     def to_JSON_object(self):
         return True
@@ -100,11 +118,17 @@ class LogicFalse(LogicValue):
     def is_false(self):
         return True
 
+    def negate(self):
+        return LOGIC_TRUE
+
     def join(self, value):
         return self
 
     def disjoin(self, value):
         return value
+
+    def implies(self, value):
+        return LOGIC_TRUE
 
     def to_JSON_object(self):
         return False
@@ -184,6 +208,9 @@ class LogicNot(LogicValue):
     @property
     def is_not(self):
         return True
+
+    def negate(self):
+        return self.operand
 
     def simplify(self):
         if self.operand.is_not:
