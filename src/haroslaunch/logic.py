@@ -72,6 +72,10 @@ class LogicValue(object):
     def simplify(self):
         return self
 
+    def variables(self):
+        # iterator
+        return None
+
 
 class LogicTrue(LogicValue):
     __slots__ = ()
@@ -169,6 +173,9 @@ class LogicVariable(LogicValue):
     def is_variable(self):
         return True
 
+    def variables(self):
+        yield self
+
     def to_JSON_object(self):
         try:
             data = self.data.to_JSON_object()
@@ -221,6 +228,9 @@ class LogicNot(LogicValue):
         if operand.is_false:
             return LogicValue.T
         return self
+
+    def variables(self):
+        yield from self.operand.variables()
 
     def to_JSON_object(self):
         return ['not', self.operand.to_JSON_object()]
@@ -283,6 +293,10 @@ class LogicAnd(LogicValue):
             for x in operands:
                 return x
         return LogicAnd(operands)
+
+    def variables(self):
+        for x in self.operands:
+            yield from x.variables()
 
     def to_JSON_object(self):
         return ['and'] + [arg.to_JSON_object() for arg in self.operands]
@@ -350,6 +364,10 @@ class LogicOr(LogicValue):
             for x in operands:
                 return x
         return LogicOr(operands)
+
+    def variables(self):
+        for x in self.operands:
+            yield from x.variables()
 
     def to_JSON_object(self):
         return ['or'] + [arg.to_JSON_object() for arg in self.operands]
