@@ -162,7 +162,7 @@ def _param_values_clash(param, other) -> LogicValue:
             if param.value.value != other.value.value:
                 return LogicValue.T
             return LogicValue.F
-    return _var_equal(param.value, other.value)
+    return _var_equal(param.value, other.value).negate()
 
 
 def _var_equal(one, other) -> LogicVariable:
