@@ -5,7 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, Mapping
+from typing import Any, Dict, Final, List, Mapping
+
+from collections import defaultdict
 
 from haroslaunch.launch_interpreter import LaunchInterpreter
 from haroslaunch.logic import LogicValue, LogicVariable
@@ -89,17 +91,29 @@ def _compatible_condition(
 def _are_nodes_compatible(mine: List[Any], theirs: List[Any]) -> LogicValue:
     c: LogicValue = LogicValue.T
     for node in mine:
-        c = c.join(_check_rosname_available(node.name, theirs))
-        if c.is_false:
-            return c
-        c = c.join(_check_rosname_available(node.name, theirs))
+        if node.condition.is_false:
+            continue
+        p = node.condition
+        q = _check_rosname_available(node.name, theirs)
+        r = p.implies(q).simplify()
+        if r.is_false:
+            return r
+        c = c.join(r)
     return c.simplify()
 
 
 def _are_params_compatible(mine: List[Any], theirs: List[Any]) -> LogicValue:
     c: LogicValue = LogicValue.T
     for param in mine:
-        c = c.join(_check_rosname_available(param.name, theirs))
+        if param.condition.is_false:
+            continue
+        p = param.condition
+        q = _check_rosname_available(param.name, theirs)
+        r = p.implies(q).simplify()
+        if r.is_false:
+            return r
+        c = c.join(r)
+    # FIXME: name collision is only relevant if the values are different.
     return c.simplify()
 
 
@@ -107,16 +121,32 @@ def _check_rosname_available(rosname: RosName, resources: List[Any]) -> LogicVal
     c: LogicValue = LogicValue.T
     if rosname.is_unknown:
         for other in resources:
+            if other.condition.is_false:
+                continue
+            p = other.condition
             if other.name.is_unknown:
-                c = c.join(_check_rosname_two_unknown(rosname, other.name))
+                q = _check_rosname_two_unknown(rosname, other.name)
             else:
-                c = c.join(_check_rosnames_one_unknown(other.name, rosname))
+                q = _check_rosnames_one_unknown(other.name, rosname)
+            r = p.implies(q).simplify()
+            if r.is_false:
+                return r
+            c = c.join(r)
     else:
         for other in resources:
+            if other.condition.is_false:
+                continue
+            p = other.condition
             if other.name.is_unknown:
-                c = c.join(_check_rosnames_one_unknown(rosname, other.name))
+                q = _check_rosnames_one_unknown(rosname, other.name)
+                r = p.implies(q).simplify()
+                if r.is_false:
+                    return r
+                c = c.join(r)
             elif rosname == other.name:
-                return LogicValue.F
+                if p.is_true:
+                    return LogicValue.F
+                c = c.join(p.negate())
             else:
                 pass  # both known and different
     return c.simplify()
@@ -132,47 +162,38 @@ def _check_rosnames_one_unknown(rosname: RosName, unknown: RosName) -> LogicValu
 
 
 def _check_rosname_two_unknown(one: RosName, other: RosName) -> LogicValue:
-    if one.to_pattern() == other.to_pattern():
-        return LogicValue.T
     text = f'{one} == {other}'
     data = ('==', one, other)
     return LogicVariable(text, data)
 
 
-def _check_nodelet_available(node: Any, resources: List[Any]) -> LogicValue:
-    c: LogicValue = LogicValue.T
-    if node.package != 'nodelet':
-        return c
-    if node.executable != 'nodelet':
-        return c
-    if node.args.is_resolved:
-        if not node.args.value:
-            return c
-
-    return c
-
-
 def _loaded_nodelets(nodes: List[Any]) -> Dict[str, List[Any]]:
-    managers: Dict[str, List[Any]] = {}
+    managers: Dict[str, List[Any]] = defaultdict(list)
     for node in nodes:
         if node.package != 'nodelet':
             continue
         if node.executable != 'nodelet':
             continue
-        if node.args.is_resolved:
-            if not node.args.value:
-                continue
-            args = node.args.value
-        else:
-            if isinstance(node.args.value[0], str):
-                args = node.args.value[0]
-            else:
-                # starts with UnknownValue
-                pass
-        # 'standalone' does not matter here
-        if args.value == 'manager':
-            key = node.name.full
-            if key not in managers:
-                managers[key] = []
-        elif args.value:
-            pass
+        if not node.args.is_resolved:
+            # contains UnknownValue; command, nodelet or manager are unknown
+            continue
+        if not node.args.value:
+            continue  # this should be an error; nodelet requires arguments
+        args = node.args.value.strip().split()
+        assert len(args) > 0
+        # 'manager' and 'standalone' do not matter here
+        if args[0] == 'load':
+            # load pkg/type manager
+            if len(args) < 3:
+                continue  # this should be an error
+            managers[args[2]].append(node)
+        elif args[0] == 'unload':
+            # unload name manager
+            if len(args) < 3:
+                continue  # this should be an error
+            nodelets = managers[args[2]]
+            for i in range(len(nodelets)):
+                if nodelets.name.full == args[1]:
+                    del nodelets[i]
+                    break
+    return managers
