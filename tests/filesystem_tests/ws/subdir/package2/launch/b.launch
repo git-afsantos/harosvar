@@ -4,6 +4,6 @@
   <node pkg="package1" type="$(arg node_type)" name="master" />
 
   <include file="$(find package2)/launch/includes/c.launch.xml">
-    <arg name="node_name" value="slave" />
+    <arg name="node_name" value="worker" />
   </include>
 </launch>

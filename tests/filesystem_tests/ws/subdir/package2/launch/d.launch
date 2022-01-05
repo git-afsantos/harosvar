@@ -1,0 +1,24 @@
+<launch>
+  <!--
+    Node "worker" collides with file 'b.launch' via include of 'c.launch.xml'.
+    Node "p1n2" collides with file 'a.launch' if `$(arg use_node2)`.
+    If parameter collision is enabled, parameter "z" collides with file
+    'a.launch' if a value other than `true` is assigned.
+  -->
+  <arg name="use_node2" default="false" />
+  <arg name="z" default="false" />
+
+  <param name="z" type="bool" value="$(arg z)" />
+
+  <param name="~x" type="double" value="1" />
+
+  <node pkg="package1" type="node1" name="manager" />
+
+  <include file="$(find package2)/launch/includes/c.launch.xml">
+    <arg name="node_name" value="worker" />
+  </include>
+
+  <node pkg="package1" type="node2" name="p1n2" if="$(arg use_node2)">
+    <param name="y" type="double" value="0" />
+  </node>
+</launch>
