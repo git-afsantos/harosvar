@@ -24,7 +24,28 @@ RosSystemId: Final = NewType('RosSystemId', str)
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Package:
     name: str
+    files: List[str] = attr.Factory(list)
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class File:
+    package: str
     path: str
+
+    @property
+    def uid(self) -> str:
+        return f'{self.package}/{self.path}'
+
+    @property
+    def name(self) -> str:
+        return self.path.rsplit(sep='/', maxsplit=1)[-1]
+
+    @property
+    def directory(self) -> str:
+        parts = self.path.rsplit(sep='/', maxsplit=1)
+        if len(parts) > 1:
+            return parts[0]
+        return '.'
 
 
 ###############################################################################
@@ -59,8 +80,13 @@ class RosSystem:
 class ProjectModel:
     name: str
     packages: Dict[str, Package] = attr.Factory(dict)
+    files: Dict[FileId, File] = attr.Factory(dict)
     launch_files: Dict[FileId, FeatureModel] = attr.Factory(dict)
     systems: Dict[RosSystemId, RosSystem] = attr.Factory(dict)
-    # files: Dict[FileId, File] = attr.Factory(dict)
     # nodes: Dict[str, Executable] = attr.Factory(dict)
     # parse_trees: Dict[FileId, AST] = attr.Factory(dict)
+
+    def get_file_path(self, uid: FileId) -> str:
+        f = self.files[uid]
+        root = self.packages[f.package].path
+        return f'{root}/{f.path}'

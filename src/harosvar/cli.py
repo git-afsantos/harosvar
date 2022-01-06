@@ -28,6 +28,7 @@ from haroslaunch.ros_iface import SimpleRosInterface
 from harosvar import __version__ as current_version
 import harosvar.analysis as ana
 import harosvar.filesystem as fsys
+from harosvar.model import File, Package, ProjectModel
 
 ###############################################################################
 # Argument Parsing
@@ -101,8 +102,10 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Configurations: {configs}')
     pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
     ros_iface = SimpleRosInterface(strict=True, pkgs=pkgs)
+    model = ProjectModel('ROS Project')
     all_launch_files = {}
     for name, path in pkgs.items():
+        model.packages[name] = Package(name, path)
         launch_files: List[str] = fsys.find_launch_xml_files(path)
         print(f'\nPackage {name}:')
         print(_bullets(launch_files))
