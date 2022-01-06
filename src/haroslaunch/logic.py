@@ -227,6 +227,12 @@ class LogicNot(LogicValue):
             return LogicValue.F
         if operand.is_false:
             return LogicValue.T
+        if operand.is_and:
+            operands = [LogicNot(x).simplify() for x in operand.operands]
+            return LogicOr(operands)
+        if operand.is_or:
+            operands = [LogicNot(x).simplify() for x in operand.operands]
+            return LogicAnd(operands)
         return self
 
     def variables(self):
@@ -289,10 +295,12 @@ class LogicAnd(LogicValue):
                 operands.add(y)
         if not operands:
             return LogicValue.T
-        if len(operands) == 1:
-            for x in operands:
-                return x
-        return LogicAnd(operands)
+        # there are no duplicates, LogicTrue, LogicFalse, or LogicAnd here
+        operands = list(operands)
+        if self._is_contradiction(operands):
+            return LogicValue.F
+        self._trim_larger_ors(operands)
+        return LogicAnd(operands) if len(operands) > 1 else operands[0]
 
     def variables(self):
         for x in self.operands:
@@ -300,6 +308,32 @@ class LogicAnd(LogicValue):
 
     def to_JSON_object(self):
         return ['and'] + [arg.to_JSON_object() for arg in self.operands]
+
+    def _is_contradiction(self, operands):
+        for i in range(len(operands) - 1):
+            x = operands[i].negate()
+            for j in range(i + 1, len(operands)):
+                if x == operands[j]:
+                    return True
+        return False
+
+    def _trim_larger_ors(self, operands):
+        for i in range(len(operands) - 2, -1, -1):
+            x = operands[i]
+            if not x.is_or:
+                continue
+            xs = set(x.operands)
+            for j in range(len(operands) - 1, i, -1):
+                y = operands[j]
+                if not y.is_or:
+                    continue
+                ys = set(y.operands)
+                common = xs & ys
+                if common == xs:
+                    del operands[j]
+                elif common == ys:
+                    del operands[i]
+                    break
 
     def __repr__(self):
         return '{}({!r})'.format(type(self).__name__, self.operands)
@@ -360,10 +394,12 @@ class LogicOr(LogicValue):
                 operands.add(y)
         if not operands:
             return LogicValue.T
-        if len(operands) == 1:
-            for x in operands:
-                return x
-        return LogicOr(operands)
+        # there are no duplicates, LogicTrue, LogicFalse, or LogicOr here
+        operands = list(operands)
+        if self._is_tautology(operands):
+            return LogicValue.T
+        self._trim_larger_ands(operands)
+        return LogicOr(operands) if len(operands) > 1 else operands[0]
 
     def variables(self):
         for x in self.operands:
@@ -371,6 +407,32 @@ class LogicOr(LogicValue):
 
     def to_JSON_object(self):
         return ['or'] + [arg.to_JSON_object() for arg in self.operands]
+
+    def _is_tautology(self, operands):
+        for i in range(len(operands) - 1):
+            x = operands[i].negate()
+            for j in range(i + 1, len(operands)):
+                if x == operands[j]:
+                    return True
+        return False
+
+    def _trim_larger_ands(self, operands):
+        for i in range(len(operands) - 2, -1, -1):
+            x = operands[i]
+            if not x.is_and:
+                continue
+            xs = set(x.operands)
+            for j in range(len(operands) - 1, i, -1):
+                y = operands[j]
+                if not y.is_and:
+                    continue
+                ys = set(y.operands)
+                common = xs & ys
+                if common == xs:
+                    del operands[j]
+                elif common == ys:
+                    del operands[i]
+                    break
 
     def __repr__(self):
         return '{}({!r})'.format(type(self).__name__, self.operands)
