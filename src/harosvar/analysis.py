@@ -27,7 +27,7 @@ CompatibilityMap: Final = Dict[str, Dict[str, LogicValue]]
 
 def filter_top_level_files(launch_files: LaunchData) -> LaunchData:
     included_files = set()
-    for launch_file, lfi in launch_files.items():
+    for lfi in launch_files.values():
         included_files.update(map(str, lfi.included_files))
     top_level_files: Dict[str, LaunchInterpreter] = dict(launch_files)
     for launch_file in included_files:
