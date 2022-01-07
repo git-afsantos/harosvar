@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, NewType
+from typing import Dict, Final, List, NewType
 
 import attr
 
@@ -15,6 +15,7 @@ import attr
 
 FileId: Final = NewType('FileId', str)
 RosSystemId: Final = NewType('RosSystemId', str)
+FeatureName: Final = NewType('FeatureName', str)
 
 ###############################################################################
 # File System Entities
@@ -33,8 +34,8 @@ class File:
     path: str
 
     @property
-    def uid(self) -> str:
-        return f'{self.package}/{self.path}'
+    def uid(self) -> FileId:
+        return FileId(f'{self.package}/{self.path}')
 
     @property
     def name(self) -> str:
@@ -54,8 +55,22 @@ class File:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
+class ArgFeature:
+    name: FeatureName
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class NodeFeature:
+    name: FeatureName
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class FeatureModel:
     name: str
+    arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
+    nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
+    dependencies: Dict[FeatureName, FeatureName] = attr.Factory(dict)
+    conflicts: Dict[FeatureName, FeatureName] = attr.Factory(dict)
 
 
 ###############################################################################
@@ -69,6 +84,7 @@ class RosSystem:
     # stores also the calculated computation graph
     uid: RosSystemId
     name: str
+    launch: List[FileId] = attr.Factory(list)
 
 
 ###############################################################################
@@ -85,8 +101,3 @@ class ProjectModel:
     systems: Dict[RosSystemId, RosSystem] = attr.Factory(dict)
     # nodes: Dict[str, Executable] = attr.Factory(dict)
     # parse_trees: Dict[FileId, AST] = attr.Factory(dict)
-
-    def get_file_path(self, uid: FileId) -> str:
-        f = self.files[uid]
-        root = self.packages[f.package].path
-        return f'{root}/{f.path}'

@@ -18,6 +18,7 @@ from haroslaunch.metamodel import RosName
 ###############################################################################
 
 LaunchData: Final = Mapping[str, LaunchInterpreter]
+LaunchDataDict: Final = Dict[str, LaunchInterpreter]
 CompatibilityMap: Final = Dict[str, Dict[str, LogicValue]]
 
 ###############################################################################
@@ -25,7 +26,7 @@ CompatibilityMap: Final = Dict[str, Dict[str, LogicValue]]
 ###############################################################################
 
 
-def filter_top_level_files(launch_files: LaunchData) -> LaunchData:
+def filter_top_level_files(launch_files: LaunchData) -> LaunchDataDict:
     included_files = set()
     for lfi in launch_files.values():
         included_files.update(map(str, lfi.included_files))

@@ -26,9 +26,18 @@ AnyPath: Final = Union[str, Path]
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class StorageData:
+class Workspace:
+    paths: List[str]
     packages: Dict[str, str] = attr.Factory(dict)
-    files: Dict[str, str] = attr.Factory(dict)
+
+    def find_packages(self, clear: bool = False, ros_version: str = '1') -> None:
+        if clear:
+            self.packages.clear()
+        self.packages.update(find_packages(self.paths, ros_version=ros_version))
+
+    def get_file_path(self, pkg: str, relative_path: AnyPath) -> str:
+        path = Path(self.packages[pkg]) / Path(relative_path)
+        return str(path.resolve())
 
 ###############################################################################
 # Top-level Functions
@@ -52,14 +61,14 @@ def build_storage_data(paths: Iterable[AnyPath]) -> StorageData:
     return storage
 
 
-def find_packages(paths: Iterable[AnyPath]) -> Dict[str, str]:
+def find_packages(paths: Iterable[AnyPath], ros_version: str = None) -> Dict[str, str]:
     """
     Find ROS packages inside directories.
 
     :param paths: [Iterable] of file system paths to search.
     :returns: [dict] Dictionary of [str] package name -> [str] package path.
     """
-    ros_version = os.environ.get('ROS_VERSION', '1')
+    ros_version = ros_version or os.environ.get('ROS_VERSION', '1')
     if ros_version != '1':
         return _find_packages_ros2(paths)
     return _find_packages_ros1(paths)
