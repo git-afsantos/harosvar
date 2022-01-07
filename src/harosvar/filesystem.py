@@ -44,23 +44,6 @@ class Workspace:
 ###############################################################################
 
 
-def build_storage_data(paths: Iterable[AnyPath]) -> StorageData:
-    """
-    Find ROS packages and files inside the given directories.
-
-    :param paths: [Iterable] of file system paths to search.
-    :returns: [StorageData] object with identified packages and files.
-    """
-    storage = StorageData(packages=find_packages(paths))
-    for name, pkg_path in storage.packages.items():
-        relative_paths = find_launch_xml_files(pkg_path)
-        for rfp in relative_paths:
-            key = f'{name}/rfp'
-            fp = Path(pkg_path) / Path(rfp)
-            storage.files[key] = str(fp)
-    return storage
-
-
 def find_packages(paths: Iterable[AnyPath], ros_version: str = None) -> Dict[str, str]:
     """
     Find ROS packages inside directories.

@@ -18,7 +18,7 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import argparse
 import sys
@@ -29,6 +29,7 @@ from harosvar import __version__ as current_version
 import harosvar.analysis as ana
 import harosvar.filesystem as fsys
 from harosvar.model import File, Package, ProjectModel
+from harosvar.model_builder import build_project_model
 
 ###############################################################################
 # Argument Parsing
@@ -100,6 +101,30 @@ def shortcircuit(args: Dict[str, Any]) -> bool:
 def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
+
+    model = build_project_model('ROS Project', args['paths'])
+
+    for package in model.packages.values():
+        print(f'\nPackage {package.name}:')
+        print(_bullets(package.files))
+
+    for launch_file, feature_model in model.launch_files.items():
+        print(f'\n> File: {launch_file}')
+        print('\nCommand-line <arg>:')
+        print(_bullets(list(feature_model.arguments.values())))
+        print('\nList of <include> files:')
+        print(_bullets(list(feature_model.dependencies)))
+        print('\nNodes:')
+        print(_bullets(_pretty_nodes(f.node for f in feature_model.nodes.values())))
+        print('\nParams:')
+        print(_bullets(_pretty_params(f.parameter for f in feature_model.parameters.values())))
+        print('\nIncompatible files:')
+        print(_bullets(list(feature_model.conflicts)))
+
+
+def workflow2(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
+    print(f'Arguments: {args}')
+    print(f'Configurations: {configs}')
     pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
     ros_iface = SimpleRosInterface(strict=True, pkgs=pkgs)
     model = ProjectModel('ROS Project')
@@ -148,11 +173,11 @@ def _bullets(items: List[Any]) -> str:
     return f'  * {text}'
 
 
-def _pretty_nodes(nodes: List[Any]) -> List[str]:
+def _pretty_nodes(nodes: Iterable[Any]) -> List[str]:
     return [f'{n.name} ({n.package}/{n.executable}) [{n.condition}]' for n in nodes]
 
 
-def _pretty_params(params: List[Any]) -> List[str]:
+def _pretty_params(params: Iterable[Any]) -> List[str]:
     strings = []
     for p in params:
         value = p.value

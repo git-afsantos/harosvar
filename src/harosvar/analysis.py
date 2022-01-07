@@ -19,7 +19,7 @@ from haroslaunch.metamodel import RosName
 
 LaunchData: Final = Mapping[str, LaunchInterpreter]
 LaunchDataDict: Final = Dict[str, LaunchInterpreter]
-CompatibilityMap: Final = Dict[str, Dict[str, LogicValue]]
+CompatibilityDict: Final = Dict[str, Dict[str, LogicValue]]
 
 ###############################################################################
 # Top-level Functions
@@ -40,8 +40,8 @@ def filter_top_level_files(launch_files: LaunchData) -> LaunchDataDict:
 def list_compatible_files(
     launch_files: LaunchData,
     params_collide: bool = False,
-) -> CompatibilityMap:
-    compatibility: CompatibilityMap = _build_compatibility_map(launch_files)
+) -> CompatibilityDict:
+    compatibility: CompatibilityDict = _build_compatibility_map(launch_files)
     items = list(launch_files.items())
     n = len(items)
     for i in range(n):
@@ -60,8 +60,8 @@ def list_compatible_files(
 ###############################################################################
 
 
-def _build_compatibility_map(launch_files: LaunchData) -> CompatibilityMap:
-    compatibility: CompatibilityMap = {}
+def _build_compatibility_map(launch_files: LaunchData) -> CompatibilityDict:
+    compatibility: CompatibilityDict = {}
     for launch_file in launch_files:
         compatible: Dict[str, LogicValue] = {}
         for other_file in launch_files:

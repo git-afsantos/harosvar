@@ -5,9 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, NewType
+from typing import Dict, Final, List, NewType, Optional, Set
 
 import attr
+from haroslaunch.data_structs import SolverResult
+from haroslaunch.logic import LogicValue
+from haroslaunch.metamodel import RosNode, RosParameter
 
 ###############################################################################
 # Constants
@@ -56,21 +59,57 @@ class File:
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class ArgFeature:
-    name: FeatureName
+    arg: str
+    name: FeatureName = FeatureName('')
+    values: List[SolverResult] = attr.Factory(list)
+    default: Optional[SolverResult] = None
+
+    def __attrs_post_init__(self):
+        if not self.name:
+            object.__setattr__(self, 'name', FeatureName(f'arg:{self.arg}'))
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class NodeFeature:
-    name: FeatureName
+    node: RosNode
+    name: FeatureName = FeatureName('')
+
+    @property
+    def condition(self) -> LogicValue:
+        return self.node.condition
+
+    def __attrs_post_init__(self):
+        if not self.name:
+            object.__setattr__(self, 'name', FeatureName(f'node:{self.node.name}'))
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class FeatureModel:
-    name: str
+class ParameterFeature:
+    parameter: RosParameter
+    name: FeatureName = FeatureName('')
+
+    @property
+    def condition(self) -> LogicValue:
+        return self.parameter.condition
+
+    def __attrs_post_init__(self):
+        if not self.name:
+            object.__setattr__(self, 'name', FeatureName(f'param:{self.parameter.name}'))
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class LaunchFeatureModel:
+    file: FileId
+    name: FeatureName = FeatureName('')
     arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
     nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
-    dependencies: Dict[FeatureName, FeatureName] = attr.Factory(dict)
-    conflicts: Dict[FeatureName, FeatureName] = attr.Factory(dict)
+    parameters: Dict[FeatureName, ParameterFeature] = attr.Factory(dict)
+    dependencies: Set[FeatureName] = attr.Factory(set)
+    conflicts: Set[FeatureName] = attr.Factory(set)
+
+    def __attrs_post_init__(self):
+        if not self.name:
+            object.__setattr__(self, 'name', FeatureName(f'roslaunch:{self.file}'))
 
 
 ###############################################################################
@@ -97,7 +136,7 @@ class ProjectModel:
     name: str
     packages: Dict[str, Package] = attr.Factory(dict)
     files: Dict[FileId, File] = attr.Factory(dict)
-    launch_files: Dict[FileId, FeatureModel] = attr.Factory(dict)
+    launch_files: Dict[FileId, LaunchFeatureModel] = attr.Factory(dict)
     systems: Dict[RosSystemId, RosSystem] = attr.Factory(dict)
     # nodes: Dict[str, Executable] = attr.Factory(dict)
     # parse_trees: Dict[FileId, AST] = attr.Factory(dict)
