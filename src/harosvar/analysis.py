@@ -17,20 +17,21 @@ from haroslaunch.metamodel import RosName
 # Constants
 ###############################################################################
 
-LaunchData: Final = Mapping[str, LaunchInterpreter]
+LaunchDataMap: Final = Mapping[str, LaunchInterpreter]
 LaunchDataDict: Final = Dict[str, LaunchInterpreter]
-CompatibilityDict: Final = Dict[str, Dict[str, LogicValue]]
+ConditionalSet: Final = Dict[str, LogicValue]
+CompatibilityDict: Final = Dict[str, ConditionalSet]
 
 ###############################################################################
 # Top-level Functions
 ###############################################################################
 
 
-def filter_top_level_files(launch_files: LaunchData) -> LaunchDataDict:
+def filter_top_level_files(launch_files: LaunchDataMap) -> LaunchDataDict:
     included_files = set()
     for lfi in launch_files.values():
         included_files.update(map(str, lfi.included_files))
-    top_level_files: Dict[str, LaunchInterpreter] = dict(launch_files)
+    top_level_files: LaunchDataDict = dict(launch_files)
     for launch_file in included_files:
         if launch_file in top_level_files:
             del top_level_files[launch_file]
@@ -38,7 +39,7 @@ def filter_top_level_files(launch_files: LaunchData) -> LaunchDataDict:
 
 
 def list_compatible_files(
-    launch_files: LaunchData,
+    launch_files: LaunchDataMap,
     params_collide: bool = False,
 ) -> CompatibilityDict:
     compatibility: CompatibilityDict = _build_compatibility_map(launch_files)
@@ -46,7 +47,7 @@ def list_compatible_files(
     n = len(items)
     for i in range(n):
         launch_file, lfi = items[i]
-        compatible: Dict[str, LogicValue] = compatibility[launch_file]
+        compatible: ConditionalSet = compatibility[launch_file]
         for j in range(i + 1, n):
             other_file, other_lfi = items[j]
             c = _compatible_condition(lfi, other_lfi, params_collide=params_collide)
@@ -60,10 +61,10 @@ def list_compatible_files(
 ###############################################################################
 
 
-def _build_compatibility_map(launch_files: LaunchData) -> CompatibilityDict:
+def _build_compatibility_map(launch_files: LaunchDataMap) -> CompatibilityDict:
     compatibility: CompatibilityDict = {}
     for launch_file in launch_files:
-        compatible: Dict[str, LogicValue] = {}
+        compatible: ConditionalSet = {}
         for other_file in launch_files:
             if launch_file != other_file:
                 compatible[other_file] = LogicValue.T
