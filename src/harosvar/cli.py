@@ -122,44 +122,6 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(_bullets(list(feature_model.conflicts)))
 
 
-def workflow2(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
-    print(f'Arguments: {args}')
-    print(f'Configurations: {configs}')
-    pkgs: Dict[str, str] = fsys.find_packages(args['paths'])
-    ros_iface = SimpleRosInterface(strict=True, pkgs=pkgs)
-    model = ProjectModel('ROS Project')
-    all_launch_files = {}
-    for name, path in pkgs.items():
-        model.packages[name] = Package(name, path)
-        launch_files: List[str] = fsys.find_launch_xml_files(path)
-        print(f'\nPackage {name}:')
-        print(_bullets(launch_files))
-        for launch_file in launch_files:
-            lfi = LaunchInterpreter(ros_iface, include_absent=True)
-            lfi.interpret(launch_file)
-            all_launch_files[launch_file] = lfi
-    top_level_files = ana.filter_top_level_files(all_launch_files)
-    print('\nTop-level launch files:')
-    print(_bullets(top_level_files))
-    compatibility = ana.list_compatible_files(top_level_files, params_collide=True)
-    for launch_file, lfi in top_level_files.items():
-        print(f'\n> File: {launch_file}')
-        assert len(lfi.cmd_line_args) == 1
-        assert str(lfi.cmd_line_args[0][0]) == launch_file
-        args = lfi.cmd_line_args[0][1]
-        print('\nCommand-line <arg>:')
-        print(_bullets(list(args.items())))
-        print('\nList of <include> files:')
-        print(_bullets(list(map(str, lfi.included_files))))
-        print('\nNodes:')
-        print(_bullets(_pretty_nodes(lfi.nodes)))
-        print('\nParams:')
-        print(_bullets(_pretty_params(lfi.parameters)))
-        print('\nCompatible files:')
-        print(_bullets(_pretty_compatibility(compatibility[launch_file].items())))
-    # print(json.dumps(lfi.to_JSON_object()))
-
-
 ###############################################################################
 # Helper Functions
 ###############################################################################
