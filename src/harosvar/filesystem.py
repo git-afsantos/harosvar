@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Union
+from typing import Dict, Final, Iterable, List, Optional, Tuple, Union
 
 import os
 from pathlib import Path
@@ -38,6 +38,26 @@ class Workspace:
     def get_file_path(self, pkg: str, relative_path: AnyPath) -> str:
         path = Path(self.packages[pkg]) / Path(relative_path)
         return str(path.resolve())
+
+    def package_for_file_path(self, file_path: AnyPath) -> Optional[str]:
+        native = str(file_path)
+        for name, path in self.packages.items():
+            prefix = path + os.path.sep
+            if native.startswith(prefix):
+                return name
+        return None
+
+    def split_package(self, file_path: AnyPath, native: bool = False) -> Tuple[str, str]:
+        # returns (root, relative path)
+        pkg = self.package_for_file_path(file_path)
+        if pkg is None:
+            return ('', file_path)
+        root = Path(self.packages[pkg]).parent
+        relative_path = Path(file_path).relative_to(root)
+        if native:
+            return (str(root), str(relative_path))
+        else:
+            return (root.as_posix(), relative_path.as_posix())
 
 ###############################################################################
 # Top-level Functions

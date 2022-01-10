@@ -5,13 +5,13 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, List, Mapping
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Tuple
 
 from collections import defaultdict
 
 from haroslaunch.launch_interpreter import LaunchInterpreter
 from haroslaunch.logic import LogicValue, LogicVariable
-from haroslaunch.metamodel import RosName
+from haroslaunch.metamodel import RosName, RosNode
 
 ###############################################################################
 # Constants
@@ -22,8 +22,11 @@ LaunchDataDict: Final = Dict[str, LaunchInterpreter]
 ConditionalSet: Final = Dict[str, LogicValue]
 CompatibilityDict: Final = Dict[str, ConditionalSet]
 
+NodeletLists: Final = Dict[str, List[Tuple[RosNode, str]]]
+NodeletInfo: Final = Tuple[List[RosNode], NodeletLists, NodeletLists]
+
 ###############################################################################
-# Top-level Functions
+# Module Interface
 ###############################################################################
 
 
@@ -36,6 +39,14 @@ def filter_top_level_files(launch_files: LaunchDataMap) -> LaunchDataDict:
         if launch_file in top_level_files:
             del top_level_files[launch_file]
     return top_level_files
+
+
+def filter_standalone_files(launch_files: LaunchDataMap) -> LaunchDataDict:
+    standalone_files: LaunchDataDict = dict(launch_files)
+    for launch_file, lfi in launch_files.items():
+        if not _is_standalone(lfi):
+            del standalone_files[launch_file]
+    return standalone_files
 
 
 def list_compatible_files(
@@ -174,12 +185,48 @@ def _var_equal(one, other) -> LogicVariable:
 
 
 ###############################################################################
-# Helper Functions - Nodelets
+# Helper Functions - Nodelets and Standalone Files
 ###############################################################################
 
 
-def _loaded_nodelets(nodes: List[Any]) -> Dict[str, List[Any]]:
-    managers: Dict[str, List[Any]] = defaultdict(list)
+def _is_standalone(lfi: LaunchInterpreter) -> bool:
+    if not lfi.nodes:
+        return False
+    managers, loaded, unloaded = _get_nodelets(lfi.nodes)
+    if not loaded and not unloaded:
+        return True
+    for manager in loaded:
+        rosname = RosName(manager)
+        for node in managers:
+            if node.name == rosname:
+                break
+        else:
+            # manager is launched in a different file
+            return False
+    for manager, nodelets in unloaded.items():
+        rosname = RosName(manager)
+        for node in managers:
+            if node.name == rosname:
+                break
+        else:
+            # manager is launched in a different file
+            return False
+        # The loop below might not be needed.
+        # It checks whether the unloaded nodelet is loaded in the same file.
+        for _node, name in nodelets:
+            rosname = RosName(name)
+            for node, _type in loaded[manager]:
+                if node.name == rosname:
+                    break
+            else:
+                return False
+    return True
+
+
+def _get_nodelets(nodes: List[RosNode]) -> NodeletInfo:
+    managers: List[RosNode] = []
+    loaded: NodeletLists = defaultdict(list)
+    unloaded: NodeletLists = defaultdict(list)
     for node in nodes:
         if node.package != 'nodelet':
             continue
@@ -190,21 +237,19 @@ def _loaded_nodelets(nodes: List[Any]) -> Dict[str, List[Any]]:
             continue
         if not node.args.value:
             continue  # this should be an error; nodelet requires arguments
-        args = node.args.value.strip().split()
+        args: List[str] = node.args.value.strip().split()
         assert len(args) > 0
         # 'manager' and 'standalone' do not matter here
-        if args[0] == 'load':
+        if args[0] == 'manager':
+            managers.append(node)
+        elif args[0] == 'load':
             # load pkg/type manager
             if len(args) < 3:
                 continue  # this should be an error
-            managers[args[2]].append(node)
+            loaded[args[2]].append((node, args[1]))
         elif args[0] == 'unload':
             # unload name manager
             if len(args) < 3:
                 continue  # this should be an error
-            nodelets = managers[args[2]]
-            for i in range(len(nodelets)):
-                if nodelets.name.full == args[1]:
-                    del nodelets[i]
-                    break
-    return managers
+            unloaded[args[2]].append((node, args[1]))
+    return (managers, loaded, unloaded)

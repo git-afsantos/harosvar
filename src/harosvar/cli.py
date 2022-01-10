@@ -121,6 +121,9 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print('\nIncompatible files:')
         print(_bullets(list(feature_model.conflicts)))
 
+    print('\nSystems:')
+    print(_bullets(list(model.systems.values())))
+
 
 ###############################################################################
 # Helper Functions

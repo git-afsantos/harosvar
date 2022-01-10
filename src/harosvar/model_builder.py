@@ -21,6 +21,8 @@ from harosvar.model import (
     Package,
     ParameterFeature,
     ProjectModel,
+    RosSystem,
+    RosSystemId,
 )
 
 ###############################################################################
@@ -31,7 +33,7 @@ LFIMap: Final = Mapping[FileId, LaunchInterpreter]
 LFIDict: Final = Dict[FileId, LaunchInterpreter]
 
 ###############################################################################
-# Top-level Functions
+# Module Interface
 ###############################################################################
 
 
@@ -46,8 +48,7 @@ def build_project_model(name: str, paths: Iterable[str]) -> ProjectModel:
     compatibility = ana.list_compatible_files(interpreters, params_collide=True)
     _build_feature_models(model, interpreters, compatibility)
 
-    # top_level_files = ana.filter_top_level_files(interpreters)
-    # create singleton systems
+    _build_singleton_systems(model, interpreters, compatibility)
 
     return model
 
@@ -113,6 +114,11 @@ def _interpret_launch_files(model: ProjectModel, ws: fsys.Workspace) -> LFIDict:
         lfi = LaunchInterpreter(ros_iface, include_absent=True)
         lfi.interpret(path)
         interpreters[uid] = lfi
+        # fix: replace absolute paths in `lfi.included_files` with FileId
+        for i in range(len(lfi.included_files)):
+            root, launch_file = ws.split_package(lfi.included_files[i], native=False)
+            if root:
+                lfi.included_files[i] = launch_file
     return interpreters
 
 
@@ -163,3 +169,26 @@ def _file_conflicts(model: LaunchFeatureModel, cd: ana.CompatibilityDict):
     for uid, condition in compatibility.items():
         if condition.is_false and uid != model.file:
             model.conflicts.add(FeatureName(f'roslaunch:{uid}'))
+
+
+###############################################################################
+# Helper Functions - Systems
+###############################################################################
+
+
+def _build_singleton_systems(
+    model: ProjectModel,
+    interpreters: LFIDict,
+    compatibility: ana.CompatibilityDict,
+):
+    top_level_files = ana.filter_top_level_files(interpreters)
+    standalone_files = ana.filter_standalone_files(top_level_files)
+    for launch_file in standalone_files:
+        _new_system(model, launch_file)
+
+
+def _new_system(model: ProjectModel, launch_file: str):
+    uid = RosSystemId(f'system#{len(model.systems) + 1}')
+    system = RosSystem(uid, launch_file)
+    system.launch.append(FileId(launch_file))
+    model.systems[uid] = system
