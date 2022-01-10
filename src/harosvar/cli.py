@@ -26,10 +26,9 @@ import sys
 from haroslaunch.launch_interpreter import LaunchInterpreter
 from haroslaunch.ros_iface import SimpleRosInterface
 from harosvar import __version__ as current_version
-import harosvar.analysis as ana
 import harosvar.filesystem as fsys
 from harosvar.model import File, Package, ProjectModel
-from harosvar.model_builder import build_project_model
+from harosvar.model_builder import build_computation_graph, build_project
 
 ###############################################################################
 # Argument Parsing
@@ -102,7 +101,9 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
 
-    model = build_project_model('ROS Project', args['paths'])
+    ws = fsys.Workspace(list(args['paths']))
+    ws.find_packages()
+    model = build_project('ROS Project', ws)
 
     for package in model.packages.values():
         print(f'\nPackage {package.name}:')
@@ -123,6 +124,14 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 
     print('\nSystems:')
     print(_bullets(list(model.systems.values())))
+
+    for system in model.systems.values():
+        cg = build_computation_graph(model, ws, system.uid)
+        print(f'\nSystem {system.name}')
+        print('\nNodes:')
+        print(_bullets(_pretty_nodes(cg.nodes)))
+        print('\nParams:')
+        print(_bullets(_pretty_params(cg.parameters)))
 
 
 ###############################################################################

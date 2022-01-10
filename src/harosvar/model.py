@@ -20,6 +20,8 @@ FileId: Final = NewType('FileId', str)
 RosSystemId: Final = NewType('RosSystemId', str)
 FeatureName: Final = NewType('FeatureName', str)
 
+Ternary: Final = Optional[bool]
+
 ###############################################################################
 # File System Entities
 ###############################################################################
@@ -104,6 +106,7 @@ class LaunchFeatureModel:
     arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
     nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
     parameters: Dict[FeatureName, ParameterFeature] = attr.Factory(dict)
+    # TODO: machines
     dependencies: Set[FeatureName] = attr.Factory(set)
     conflicts: Set[FeatureName] = attr.Factory(set)
 
@@ -118,12 +121,31 @@ class LaunchFeatureModel:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
+class EditableFeatureModel:
+    launch_file: FileId
+    arguments: Dict[str, Optional[str]] = attr.Factory(dict)
+    features: Dict[FeatureName, Ternary] = attr.Factory(dict)
+
+    def reset(self):
+        for name in self.arguments:
+            self.arguments[name] = None
+        for name in self.features:
+            self.features[name] = None
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class RosSystem:
     # references launch files, feature models and user feature selections
-    # stores also the calculated computation graph
     uid: RosSystemId
     name: str
-    launch: List[FileId] = attr.Factory(list)
+    launch_files: List[EditableFeatureModel] = attr.Factory(list)
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class RosComputationGraph:
+    system: RosSystemId
+    nodes: List[RosNode] = attr.Factory(list)
+    parameters: List[RosParameter] = attr.Factory(list)
 
 
 ###############################################################################

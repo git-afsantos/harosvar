@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Final, Iterable, List, Optional, Tuple, Union
 
 import os
 from pathlib import Path
@@ -58,6 +58,12 @@ class Workspace:
             return (str(root), str(relative_path))
         else:
             return (root.as_posix(), relative_path.as_posix())
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        paths = data['paths']
+        packages = data['packages']
+        return cls(paths, packages=packages)
 
 ###############################################################################
 # Top-level Functions

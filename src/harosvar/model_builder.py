@@ -13,6 +13,7 @@ import harosvar.analysis as ana
 import harosvar.filesystem as fsys
 from harosvar.model import (
     ArgFeature,
+    EditableFeatureModel,
     FeatureName,
     File,
     FileId,
@@ -21,6 +22,7 @@ from harosvar.model import (
     Package,
     ParameterFeature,
     ProjectModel,
+    RosComputationGraph,
     RosSystem,
     RosSystemId,
 )
@@ -37,11 +39,15 @@ LFIDict: Final = Dict[FileId, LaunchInterpreter]
 ###############################################################################
 
 
-def build_project_model(name: str, paths: Iterable[str]) -> ProjectModel:
+def build_project_from_paths(name: str, paths: Iterable[str]) -> ProjectModel:
     ws = fsys.Workspace(list(paths))
+    ws.find_packages()
+    return build_project(name, ws)
+
+
+def build_project(name: str, ws: fsys.Workspace) -> ProjectModel:
     model = ProjectModel(name)
 
-    ws.find_packages()
     _build_packages_and_files(model, ws)
 
     interpreters = _interpret_launch_files(model, ws)
@@ -51,6 +57,27 @@ def build_project_model(name: str, paths: Iterable[str]) -> ProjectModel:
     _build_singleton_systems(model, interpreters, compatibility)
 
     return model
+
+
+def build_computation_graph(
+    model: ProjectModel,
+    ws: fsys.Workspace,
+    uid: RosSystemId,
+) -> RosComputationGraph:
+    system = model.systems[uid]
+    ros_iface = SimpleRosInterface(strict=True, pkgs=ws.packages)
+    lfi = LaunchInterpreter(ros_iface, include_absent=False)
+    for selection in system.launch_files:
+        file = model.files[selection.launch_file]
+        path = ws.get_file_path(file.package, file.path)
+        args = {name: value for name, value in selection.arguments.items() if value is not None}
+        lfi.interpret(path, args=args)
+    # FIXME: lfi.rosparam_cmds
+    # FIXME: node links
+    cg = RosComputationGraph(uid)
+    cg.nodes.extend(lfi.nodes)
+    cg.parameters.extend(lfi.parameters)
+    return cg
 
 
 ###############################################################################
@@ -160,7 +187,6 @@ def _param_features(model: LaunchFeatureModel, lfi: LaunchInterpreter):
 
 def _include_dependencies(model: LaunchFeatureModel, lfi: LaunchInterpreter):
     for path in lfi.included_files:
-        # FIXME
         model.dependencies.add(FeatureName(f'roslaunch:{path}'))
 
 
@@ -184,11 +210,26 @@ def _build_singleton_systems(
     top_level_files = ana.filter_top_level_files(interpreters)
     standalone_files = ana.filter_standalone_files(top_level_files)
     for launch_file in standalone_files:
-        _new_system(model, launch_file)
+        _new_system(model, FileId(launch_file))
 
 
-def _new_system(model: ProjectModel, launch_file: str):
+def _new_system(model: ProjectModel, launch_file: FileId):
     uid = RosSystemId(f'system#{len(model.systems) + 1}')
-    system = RosSystem(uid, launch_file)
-    system.launch.append(FileId(launch_file))
-    model.systems[uid] = system
+    selection = EditableFeatureModel(launch_file)
+    feature_model = model.launch_files[launch_file]
+    for name in feature_model.arguments:
+        assert name not in selection.features
+        selection.features[name] = None
+    for name, feature in feature_model.nodes.items():
+        assert name not in selection.features
+        assert not feature.condition.is_false
+        if feature.condition.is_true:
+            continue
+        selection.features[name] = None
+    for name, feature in feature_model.parameters.items():
+        assert name not in selection.features
+        assert not feature.condition.is_false
+        if feature.condition.is_true:
+            continue
+        selection.features[name] = None
+    model.systems[uid] = RosSystem(uid, launch_file, launch_files=[selection])
