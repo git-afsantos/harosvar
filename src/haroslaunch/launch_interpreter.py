@@ -140,9 +140,11 @@ _RosparamDump.cmd = 'dump'
 
 
 class LaunchInterpreter(object):
-    def __init__(self, iface, include_absent=False):
+    def __init__(self, iface, include_absent=False, follow_includes=True, allow_missing_files=False):
         self.iface = iface
         self.include_absent = include_absent
+        self.follow_includes = follow_includes
+        self.allow_missing_files = allow_missing_files
         self.launch_files = []
         self.rosparam_cmds = []
         self.parameters = []
@@ -150,6 +152,7 @@ class LaunchInterpreter(object):
         self.machines = []
         self.cmd_line_args = []  # [(file, {arg -> default})]
         self.included_files = []
+        self.missing_includes = [] # List[Tuple[SolverResult, LogicValue]]
 
     def to_JSON_object(self):
         return {
@@ -432,20 +435,31 @@ class LaunchInterpreter(object):
         self.rosparam_cmds.append(cmd)
 
     def _include_tag(self, tag, scope, condition):
-        filepath = _literal(tag.resolve_file(scope))  # !!
-        pass_all_args = _literal(tag.resolve_pass_all_args(scope))  # !!
-        ns, clear = _resolve_ns_clear_params(tag, scope)  # !!
-        new_scope = scope.new_include(filepath, ns, condition, pass_all_args)
-        if clear:
-            self._clear_params(new_scope.ns)
-        self._interpret_tree(tag, new_scope)
-        new_scope = new_scope.new_launch()
-        self.included_files.append(new_scope.filepath)
-        tree = self.iface.request_parse_tree(filepath)  # !!
-        assert tree.tag == 'launch'
-        tree.check_schema()  # !!
-        self._interpret_tree(tree, new_scope)
-        # TODO: RLException: unused args [arg1, arg2] for include of ...
+        result = tag.resolve_file(scope)
+        if not self.follow_includes:
+            self.missing_includes.append((result, condition))
+        else:
+            try:
+                filepath = _literal(result)  # !!
+            except SanityError as e:
+                if self.allow_missing_files:
+                    self.missing_includes.append((result, condition))
+                    return
+                else:
+                    raise e
+            pass_all_args = _literal(tag.resolve_pass_all_args(scope))  # !!
+            ns, clear = _resolve_ns_clear_params(tag, scope)  # !!
+            new_scope = scope.new_include(filepath, ns, condition, pass_all_args)
+            if clear:
+                self._clear_params(new_scope.ns)
+            self._interpret_tree(tag, new_scope)
+            new_scope = new_scope.new_launch()
+            self.included_files.append(new_scope.filepath)
+            tree = self.iface.request_parse_tree(filepath)  # !!
+            assert tree.tag == 'launch'
+            tree.check_schema()  # !!
+            self._interpret_tree(tree, new_scope)
+            # TODO: RLException: unused args [arg1, arg2] for include of ...
 
     def _group_tag(self, tag, scope, condition):
         ns, clear = _resolve_ns_clear_params(tag, scope)  # !!

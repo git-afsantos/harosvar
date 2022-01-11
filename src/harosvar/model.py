@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, NewType, Optional, Set
+from typing import Dict, Final, List, NewType, Optional, Set, Tuple
 
 import attr
 from haroslaunch.data_structs import SolverResult
@@ -139,6 +139,7 @@ class RosSystem:
     uid: RosSystemId
     name: str
     launch_files: List[EditableFeatureModel] = attr.Factory(list)
+    missing_files: List[Tuple[SolverResult, LogicValue]] = attr.Factory(list)
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)

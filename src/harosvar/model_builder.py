@@ -66,7 +66,12 @@ def build_computation_graph(
 ) -> RosComputationGraph:
     system = model.systems[uid]
     ros_iface = SimpleRosInterface(strict=True, pkgs=ws.packages)
-    lfi = LaunchInterpreter(ros_iface, include_absent=False)
+    lfi = LaunchInterpreter(
+        ros_iface,
+        include_absent=False,
+        follow_includes=True,
+        allow_missing_files=True,
+    )
     for selection in system.launch_files:
         file = model.files[selection.launch_file]
         path = ws.get_file_path(file.package, file.path)
@@ -138,7 +143,12 @@ def _interpret_launch_files(model: ProjectModel, ws: fsys.Workspace) -> LFIDict:
     for uid in model.launch_files:
         file = model.files[uid]
         path = ws.get_file_path(file.package, file.path)
-        lfi = LaunchInterpreter(ros_iface, include_absent=True)
+        lfi = LaunchInterpreter(
+            ros_iface,
+            include_absent=True,
+            follow_includes=True,
+            allow_missing_files=True,
+        )
         lfi.interpret(path)
         interpreters[uid] = lfi
         # fix: replace absolute paths in `lfi.included_files` with FileId
@@ -209,11 +219,11 @@ def _build_singleton_systems(
 ):
     top_level_files = ana.filter_top_level_files(interpreters)
     standalone_files = ana.filter_standalone_files(top_level_files)
-    for launch_file in standalone_files:
-        _new_system(model, FileId(launch_file))
+    for launch_file, lfi in standalone_files.items():
+        _new_system(model, FileId(launch_file), lfi)
 
 
-def _new_system(model: ProjectModel, launch_file: FileId):
+def _new_system(model: ProjectModel, launch_file: FileId, lfi: LaunchInterpreter):
     uid = RosSystemId(f'system#{len(model.systems) + 1}')
     selection = EditableFeatureModel(launch_file)
     feature_model = model.launch_files[launch_file]
@@ -232,4 +242,9 @@ def _new_system(model: ProjectModel, launch_file: FileId):
         if feature.condition.is_true:
             continue
         selection.features[name] = None
-    model.systems[uid] = RosSystem(uid, launch_file, launch_files=[selection])
+    model.systems[uid] = RosSystem(
+        uid,
+        launch_file,
+        launch_files=[selection],
+        missing_files=list(lfi.missing_includes),
+    )

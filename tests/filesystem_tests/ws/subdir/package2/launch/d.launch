@@ -7,6 +7,7 @@
   -->
   <arg name="use_node2" />
   <arg name="z" default="true" />
+  <arg name="worker_launch" />
 
   <param name="z" type="bool" value="$(arg z)" />
 
@@ -14,7 +15,7 @@
 
   <node pkg="package1" type="node1" name="manager" />
 
-  <include file="$(find package2)/launch/includes/c.launch.xml">
+  <include file="$(find package2)/launch/includes/$(arg worker_launch).launch.xml">
     <arg name="node_name" value="worker" />
   </include>
 

@@ -135,6 +135,8 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(_bullets(_pretty_nodes(cg.nodes)))
         print('\nParams:')
         print(_bullets(_pretty_params(cg.parameters)))
+        print('\nMissing includes:')
+        print(_bullets(_pretty_missing_includes(system.missing_files)))
 
 
 ###############################################################################
@@ -166,6 +168,10 @@ def _pretty_params(params: Iterable[Any]) -> List[str]:
 
 def _pretty_compatibility(pairs: List[Tuple[str, Any]]) -> List[str]:
     return [f'{launch_file} [{condition}]' for launch_file, condition in pairs]
+
+
+def _pretty_missing_includes(pairs: Iterable[Tuple[Any, Any]]) -> List[str]:
+    return [f'{fp.as_string()} [{condition}]' for fp, condition in pairs]
 
 
 ###############################################################################
