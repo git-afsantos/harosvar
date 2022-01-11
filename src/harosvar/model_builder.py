@@ -77,6 +77,9 @@ def build_computation_graph(
         path = ws.get_file_path(file.package, file.path)
         args = {name: value for name, value in selection.arguments.items() if value is not None}
         lfi.interpret(path, args=args)
+    # reset system information
+    system.missing_files.clear()
+    system.missing_files.extend(lfi.missing_includes)
     # FIXME: lfi.rosparam_cmds
     # FIXME: node links
     cg = RosComputationGraph(uid)

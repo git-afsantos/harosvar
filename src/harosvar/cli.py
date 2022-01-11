@@ -127,6 +127,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 
     model.systems['system#1'].launch_files[0].arguments['use_node2'] = 'true'
     model.systems['system#1'].launch_files[0].arguments['node2_y'] = '42'
+    model.systems['system#3'].launch_files[0].arguments['worker_launch'] = 'c'
 
     for system in model.systems.values():
         cg = build_computation_graph(model, ws, system.uid)
