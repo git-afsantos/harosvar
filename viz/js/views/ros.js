@@ -495,13 +495,13 @@ THE SOFTWARE.
             }
         },
 
-        onZoom: function () {
-            this.d3g.attr("transform", d3.event.transform);
-            this.d3g.classed("zoomed-out", d3.event.transform.k < 0.3);
+        onZoom: function (event) {
+            this.d3g.attr("transform", event.transform);
+            this.d3g.classed("zoomed-out", event.transform.k < 0.3);
         },
 
-        onEmptyClick: function () {
-            d3.event.stopImmediatePropagation();
+        onEmptyClick: function (event) {
+            event.stopImmediatePropagation();
             this.deselect();
         },
 
@@ -668,8 +668,8 @@ THE SOFTWARE.
             this.radius = this.height / 2;
         },
 
-        onClick: function () {
-            d3.event.stopImmediatePropagation();
+        onClick: function (event) {
+            event.stopImmediatePropagation();
             this.trigger("selected", this.model.id);
         },
 
@@ -693,9 +693,9 @@ THE SOFTWARE.
             this.d3g.classed("dragging", true);
         },
 
-        onDrag: function () {
-            this.dragx = d3.event.x;
-            this.dragy = d3.event.y;
+        onDrag: function (event) {
+            this.dragx = event.x;
+            this.dragy = event.y;
         },
 
         onDragEnd: function () {

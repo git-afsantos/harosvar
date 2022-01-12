@@ -209,9 +209,9 @@ THE SOFTWARE.
             this.d3svg.call(this.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
         },
 
-        onZoom: function () {
-            this.d3g.attr("transform", d3.event.transform);
-            this.d3g.classed("zoomed-out", d3.event.transform.k < 0.3);
+        onZoom: function (event) {
+            this.d3g.attr("transform", event.transform);
+            this.d3g.classed("zoomed-out", event.transform.k < 0.3);
         },
 
         onSelection: function (id) {
@@ -233,8 +233,8 @@ THE SOFTWARE.
             }
         },
 
-        onEmptyClick: function () {
-            d3.event.stopImmediatePropagation();
+        onEmptyClick: function (event) {
+            event.stopImmediatePropagation();
             this.deselect();
         },
 
@@ -356,8 +356,8 @@ THE SOFTWARE.
 //            }
         },
 
-        onClick: function () {
-            d3.event.stopImmediatePropagation();
+        onClick: function (event) {
+            event.stopImmediatePropagation();
             this.trigger("selected", this.model.id);
         },
 
