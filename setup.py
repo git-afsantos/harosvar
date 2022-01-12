@@ -68,10 +68,13 @@ setup(
         'Topic :: Software Development :: Quality Assurance',
     ],
     entry_points={
-        'console_scripts': [f'{PROJECT}={PYTHON_PKG}.cli:main'],
+        'console_scripts': [
+            f'{PROJECT}={PYTHON_PKG}.cli:main',
+            'harosviz=harosviz.cli:main',
+        ],
     },
     python_requires='>=3.8, <4',
-    install_requires=['attrs>=20', 'pyyaml'],
+    install_requires=['attrs>=20', 'pyyaml', 'bottle'],
     extras_require={
         'dev': ['pytest', 'tox', 'hypothesis'],
     },
