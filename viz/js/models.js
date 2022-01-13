@@ -421,4 +421,12 @@ THE SOFTWARE.
             return "data/" + this.projectId + "/summary.json";
         }
     });
+
+////////////////////////////////////////////////////////////////////////////////
+
+    Models.FeatureModel = Backbone.Model.extend({
+        url: function () {
+            return "data/" + this.projectId + "/feature-model.json";
+        }
+    });
 })();

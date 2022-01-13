@@ -890,3 +890,26 @@ select {
     -moz-appearance: none;
     appearance: none;
 }
+
+
+#hierarchy-container {
+  overflow-y: auto;
+  height: 450px;
+}
+
+.tree-node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 1px;
+}
+
+.tree-node text {
+  font: 14px sans-serif;
+  cursor: pointer;
+}
+
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1px;
+}

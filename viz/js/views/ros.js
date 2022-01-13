@@ -23,7 +23,8 @@ THE SOFTWARE.
 (function () {
     "use strict";
     /* globals window:false, $:false, _:false, dagre:false, Backbone:false, d3:false */
-    var views = window.App.Views;
+    let views = window.App.Views;
+    let models = window.App.Models;
 
     views.RosBoard = views.BaseView.extend({
         id: "ros-board",
@@ -48,6 +49,9 @@ THE SOFTWARE.
 
             this.configTemplate = _.template($("#ros-board-config-summary").html(), {variable: "data"});
 
+            this.featureModel = new models.FeatureModel();
+            this.listenTo(this.featureModel, "sync", this.onSyncFeatureModel);
+
             this.listenTo(this.collection, "sync", this.onSync);
         },
 
@@ -61,6 +65,7 @@ THE SOFTWARE.
             } else {
                 this.$summary.html("There are no configurations to display.");
             }
+
             return this;
         },
 
@@ -73,6 +78,10 @@ THE SOFTWARE.
                 this.$configSelect.val(configId);
                 this.onSelect();
             }
+
+            this.featureModel.projectId = this.projectId;
+            this.featureModel.fetch();
+
             return this;
         },
 
@@ -82,6 +91,11 @@ THE SOFTWARE.
                 this.$configSelect.val(this.collection.first().id);
             }
             if (this.visible) this.onSelect();
+        },
+
+        onSyncFeatureModel: function (model) {
+            let myTree = new MyTree();
+            myTree.$onInit(_.clone(model.attributes));
         },
 
         onSelect: function () {
