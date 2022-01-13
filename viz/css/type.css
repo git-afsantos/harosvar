@@ -223,3 +223,7 @@ p {
 #ros-board .panel .node p {
     font-family: monospace;
 }
+
+#hierarchy-container .tree-node text {
+    font-size: .75em;
+}

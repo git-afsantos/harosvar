@@ -44,17 +44,19 @@ class MyTree {
         };
         this.onTextClick = (event, d) => {
             let previous = d.featureSelected;
-            var color = "black";
+            var value, color;
             if (d.featureSelected) {
                 d.featureSelected = false;
                 color = "firebrick";
             } else if (d.featureSelected === false) {
                 d.featureSelected = null;
+                color = "black"
             } else {
                 d.featureSelected = true;
                 color = "forestgreen";
             }
-            d3.select(event.currentTarget).style("fill", color);
+            d3.select(event.currentTarget)
+                .style("fill", color);
             console.log(`${previous} -> ${d.featureSelected}`);
         };
         this.update = (source) => {
