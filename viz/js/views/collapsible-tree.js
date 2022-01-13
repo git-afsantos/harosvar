@@ -42,6 +42,21 @@ class MyTree {
             }
             this.update(d);
         };
+        this.onTextClick = (event, d) => {
+            let previous = d.featureSelected;
+            var color = "black";
+            if (d.featureSelected) {
+                d.featureSelected = false;
+                color = "firebrick";
+            } else if (d.featureSelected === false) {
+                d.featureSelected = null;
+            } else {
+                d.featureSelected = true;
+                color = "forestgreen";
+            }
+            d3.select(event.currentTarget).style("fill", color);
+            console.log(`${previous} -> ${d.featureSelected}`);
+        };
         this.update = (source) => {
             this.width = 800;
             // Compute the new tree layout.
@@ -74,12 +89,13 @@ class MyTree {
                 .attr('transform', function () {
                 return 'translate(' + source.y0 + ',' + source.x0 + ')';
             })
-                .on('click', this.click);
+                ;
             nodeEnter.append('circle')
                 .attr('r', 1e-6)
                 .style('fill', function (d) {
                 return d._children ? 'lightsteelblue' : '#fff';
-            });
+            })
+                .on('click', this.click);
             nodeEnter.append('text')
                 .attr('x', function (d) {
                 return d.children || d._children ? 10 : 10;
@@ -96,7 +112,9 @@ class MyTree {
                     return d.data.name;
                 }
             })
-                .style('fill-opacity', 1e-6);
+                .style('fill-opacity', 1e-6)
+                .on('click', this.onTextClick)
+                .each((d) => { d.featureSelected = null; });
             nodeEnter.append('svg:title').text(function (d) {
                 return d.data.name;
             });

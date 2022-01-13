@@ -901,6 +901,7 @@ select {
   fill: #fff;
   stroke: steelblue;
   stroke-width: 1px;
+  cursor: pointer;
 }
 
 .tree-node text {
