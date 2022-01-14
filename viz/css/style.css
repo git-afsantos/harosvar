@@ -789,7 +789,7 @@ hr {
     left: 0;
     right: 0;
     background-color: rgba(245,245,245,0.75);
-    display: flex;
+    /*display: flex;*/
     flex-direction: column;
     padding: 1em;
     overflow: hidden;
@@ -900,8 +900,7 @@ select {
 }
 
 
-#hierarchy-container {
-  position: relative;
+#feature-model-container {
   height: 15em;
   border: 1px solid lightgrey;
   overflow-y: auto;
@@ -925,6 +924,10 @@ select {
   stroke-width: 1px;
 }
 
+
+#ros-system-view {
+  position: relative;
+}
 
 #ros-system-view button {
   min-width: 2em;

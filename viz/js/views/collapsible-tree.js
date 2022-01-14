@@ -81,7 +81,7 @@ class MyTree {
             this.svg.transition()
                 .duration(this.duration)
                 .attr("height", this.height);
-            d3.select('#hierarchy-container>svg')
+            d3.select('#feature-model-container>svg')
                 .style("height", this.height + 'px');
             // Update the nodes…
             let node = this.svg.selectAll('g.tree-node')
@@ -202,7 +202,7 @@ class MyTree {
         });
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
-        this.svg = select('#hierarchy-container').append('svg')
+        this.svg = select('#feature-model-container').append('svg')
             //.attr('width', this.width + this.margin.right + this.margin.left + 'px')
             //.attr('height', this.height + this.margin.top + this.margin.bottom + 'px')
             .append('g')

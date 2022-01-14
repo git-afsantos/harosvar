@@ -27,8 +27,6 @@ THE SOFTWARE.
     let models = window.App.Models;
 
     views.RosBoard = views.BaseView.extend({
-        id: "ros-board",
-
         navigateOptions: { trigger: false, replace: true },
 
         events: {
@@ -45,11 +43,11 @@ THE SOFTWARE.
             this.$querySelect = this.$("#ros-query-select");
             // this.$summary = this.$("#config-details");
 
-            this.graph = new views.RosStaticGraph({ el: this.$el.find("#config-graph") });
+            this.graph = new views.RosStaticGraph({ el: this.$("#config-graph") });
 
             this.configTemplate = _.template($("#ros-board-config-summary").html(), {variable: "data"});
 
-            this.systemView = new views.RosSystemView();
+            this.systemView = new views.RosSystemView({ el: this.$("#ros-system-view") });
 
             this.listenTo(this.collection, "sync", this.onSync);
         },
@@ -750,8 +748,6 @@ THE SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
     views.RosSystemView = Backbone.View.extend({
-        id: "ros-system-view",
-
         events: {
             "click #ros-system-btn-calc":  "calcComputationGraph",
             "click #ros-system-btn-info":  "showInfoModal"
@@ -759,8 +755,10 @@ THE SOFTWARE.
 
         initialize: function () {
             this.visible = false;
+            this.$header = this.$("#ros-system-view-header");
             this.$calcButton = this.$("#ros-system-calc");
             this.$infoButton = this.$("#ros-system-info");
+            this.$featureModelContainer = this.$("#feature-model-container");
 
             this.infoModal = new views.SystemInfo({ el: this.$("#ros-system-info-modal") });
             this.infoModal.hide();
@@ -772,6 +770,7 @@ THE SOFTWARE.
 
         render: function () {
             if (!this.visible) { return this; }
+            this.onResize();
             return this;
         },
 
@@ -802,8 +801,12 @@ THE SOFTWARE.
         },
 
         onResize: function () {
-            this.$el.height(Math.min($(window).height() - 120, 800));
+            let h = Math.min($(window).height() - 120, 800);
+            this.$el.height(h);
             // this.resetViewport();
+            let oh = this.$header.innerHeight();
+            this.$featureModelContainer.height(h - oh);
+            console.log(`resize $el to ${h} and $featureModelContainer to ${h - oh}`);
         },
     });
 })();

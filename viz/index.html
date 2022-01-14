@@ -211,7 +211,7 @@
         <div class="pure-u-1 pure-u-md-1-2 pure-u-lg-1-3">
           <div id="ros-system-view">
             <!-- begin header -->
-            <div class="flexbox">
+            <div id="ros-system-view-header" class="flexbox padding-bottom-sm">
               <h4 class="flexible">
                 <i class="fa fa-sitemap"></i> Feature Model
               </h4>
@@ -225,16 +225,17 @@
             <!-- end header -->
 
             <!-- begin feature model -->
-            <div id="hierarchy-container">
-              <div id="ros-system-info-modal" class="modal">
-                <div class="modal-content">
-                  <div class="button-close margin-top"><i class="fa fa-close"></i></div>
-                  <div class="template-wrapper"></div>
-                  <div class="button-close margin-bottom">Close</div>
-                </div>
-              </div>
+            <div id="feature-model-container">
             </div>
             <!-- end feature model -->
+
+            <div id="ros-system-info-modal" class="modal">
+              <div class="modal-content">
+                <div class="button-close margin-top"><i class="fa fa-close"></i></div>
+                <div class="template-wrapper"></div>
+                <div class="button-close margin-bottom">Close</div>
+              </div>
+            </div>
           </div>
           <div class="header-menu hidden">
             <select id="ros-query-select" class="menu-item"></select>
@@ -473,46 +474,58 @@
 
   <script type="text/template" id="ros-board-config-summary">
     <h4 class="title"><i class="fa fa-gears"></i> Summary</h4>
-    <p class="item">
-      <span class="label" title="Number of top-level launch files">Launch files</span>
-      <span class="badge-empty"><%= data.launch != null ? data.launch.length : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Total number of nodes">Nodes</span>
-      <span class="badge-empty"><%= data.nodes != null ? data.nodes.length : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Total number of topics">Topics</span>
-      <span class="badge-empty"><%= data.topics != null ? data.topics.length : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Total number of services">Services</span>
-      <span class="badge-empty"><%= data.services != null ? data.services.length : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Total number of parameters">Parameters</span>
-      <span class="badge-empty"><%= data.parameters != null ? data.parameters.length : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Total number of remappings">Remappings</span>
-      <span class="badge-empty"><%= data.remaps != null ? data.remaps : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Number of ROS resources with equal names">Name Collisions</span>
-      <span class="badge-empty"><%= data.collisions != null ? data.collisions : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="Number of runtime issues for this configuration">Issues</span>
-      <span class="badge-empty"><%= data.queries != null ? data.queries.length : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="ROS names that could not be resolved automatically">Unresolved</span>
-      <span class="badge-empty"><%= data.unresolved != null ? data.unresolved : "n/a" %></span>
-    </p>
-    <p class="item">
-      <span class="label" title="ROS resources under if statements or loops">Conditional</span>
-      <span class="badge-empty"><%= data.conditional != null ? data.conditional : "n/a" %></span>
-    </p>
+    <div class="flexbox">
+      <table class="pure-table-horizontal flexible margin-bottom">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Launch files</td>
+            <td class="text-center"><%= data.launch != null ? data.launch.length : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>ROS nodes</td>
+            <td class="text-center"><%= data.nodes != null ? data.nodes.length : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>ROS topics</td>
+            <td class="text-center"><%= data.topics != null ? data.topics.length : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>ROS services</td>
+            <td class="text-center"><%= data.services != null ? data.services.length : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>ROS parameters</td>
+            <td class="text-center"><%= data.parameters != null ? data.parameters.length : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>Name remappings</td>
+            <td class="text-center"><%= data.remaps != null ? data.remaps : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>Name collisions</td>
+            <td class="text-center"><%= data.collisions != null ? data.collisions : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>Reported issues</td>
+            <td class="text-center"><%= data.queries != null ? data.queries.length : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>Unresolved names</td>
+            <td class="text-center"><%= data.unresolved != null ? data.unresolved : "n/a" %></td>
+          </tr>
+          <tr>
+            <td>Conditional resources</td>
+            <td class="text-center"><%= data.conditional != null ? data.conditional : "n/a" %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </script>
 
   <script type="text/template" id="ros-board-info-modal">
