@@ -43,35 +43,37 @@ THE SOFTWARE.
 
             this.$configSelect = this.$("#ros-config-select");
             this.$querySelect = this.$("#ros-query-select");
-            this.$summary = this.$("#config-details");
+            // this.$summary = this.$("#config-details");
 
             this.graph = new views.RosStaticGraph({ el: this.$el.find("#config-graph") });
 
             this.configTemplate = _.template($("#ros-board-config-summary").html(), {variable: "data"});
 
-            this.featureModel = new models.FeatureModel();
-            this.listenTo(this.featureModel, "sync", this.onSyncFeatureModel);
+            this.systemView = new views.RosSystemView();
 
             this.listenTo(this.collection, "sync", this.onSync);
         },
 
         render: function () {
             this.graph.visible = this.visible;
+            this.systemView.visible = this.visible;
             if (!this.visible) return this;
             if (this.collection.length > 0) {
-                var config = this.collection.get(this.$configSelect.val());
-                this.$summary.html(this.configTemplate(_.clone(config.attributes)));
+                let config = this.collection.get(this.$configSelect.val());
+                this.systemView.model = config;
+                // this.$summary.html(this.configTemplate(_.clone(config.attributes)));
                 this.graph.render();
             } else {
-                this.$summary.html("There are no configurations to display.");
+                // this.$summary.html("There are no configurations to display.");
             }
+            this.systemView.render();
 
             return this;
         },
 
         build: function (project, configId) {
             this.projectId = project.id;
-            this.$summary.html("Select a configuration to display.");
+            // this.$summary.html("Select a configuration to display.");
             if (this.collection.length > 0) {
                 if (configId == null || this.collection.get(configId) == null)
                     configId = this.collection.first().id;
@@ -79,8 +81,7 @@ THE SOFTWARE.
                 this.onSelect();
             }
 
-            this.featureModel.projectId = this.projectId;
-            this.featureModel.fetch();
+            this.systemView.setProjectId(this.projectId);
 
             return this;
         },
@@ -91,11 +92,6 @@ THE SOFTWARE.
                 this.$configSelect.val(this.collection.first().id);
             }
             if (this.visible) this.onSelect();
-        },
-
-        onSyncFeatureModel: function (model) {
-            let myTree = new MyTree();
-            myTree.$onInit(_.clone(model.attributes));
         },
 
         onSelect: function () {
@@ -119,6 +115,7 @@ THE SOFTWARE.
         },
 
         onResize: function () {
+            this.systemView.onResize();
             this.graph.onResize();
         },
 
@@ -735,5 +732,78 @@ THE SOFTWARE.
             this.$content.html(this.template(data));
             return this;
         }
+    });
+
+    views.SystemInfo = views.Modal.extend({
+        initialize: function () {
+            this.$content = this.$el.find(".template-wrapper");
+            this.template = _.template($("#ros-board-config-summary").html(), {variable: "data"});
+        },
+
+        render: function () {
+            var data = this.model != null ? _.clone(this.model.attributes) : {};
+            this.$content.html(this.template(data));
+            return this;
+        }
+    });
+
+////////////////////////////////////////////////////////////////////////////////
+
+    views.RosSystemView = Backbone.View.extend({
+        id: "ros-system-view",
+
+        events: {
+            "click #ros-system-btn-calc":  "calcComputationGraph",
+            "click #ros-system-btn-info":  "showInfoModal"
+        },
+
+        initialize: function () {
+            this.visible = false;
+            this.$calcButton = this.$("#ros-system-calc");
+            this.$infoButton = this.$("#ros-system-info");
+
+            this.infoModal = new views.SystemInfo({ el: this.$("#ros-system-info-modal") });
+            this.infoModal.hide();
+            this.listenTo(this.infoModal, "hide", this.onHideSystemInfoModal);
+
+            this.featureModel = new models.FeatureModel();
+            this.listenTo(this.featureModel, "sync", this.onSyncFeatureModel);
+        },
+
+        render: function () {
+            if (!this.visible) { return this; }
+            return this;
+        },
+
+        onSyncFeatureModel: function (model) {
+            let myTree = new MyTree();
+            myTree.$onInit(_.clone(model.attributes));
+        },
+
+        calcComputationGraph: function () {
+            this.$calcButton.prop("disabled", true);
+            alert("Recalculate Computation Graph");
+        },
+
+        showInfoModal: function () {
+            this.$infoButton.prop("disabled", true);
+            this.infoModal.model = this.model;
+            this.infoModal.show();
+        },
+
+        onHideSystemInfoModal: function () {
+            this.infoModal.model = null;
+            this.$infoButton.removeAttr("disabled");
+        },
+
+        setProjectId: function (projectId) {
+            this.featureModel.projectId = projectId;
+            this.featureModel.fetch();
+        },
+
+        onResize: function () {
+            this.$el.height(Math.min($(window).height() - 120, 800));
+            // this.resetViewport();
+        },
     });
 })();

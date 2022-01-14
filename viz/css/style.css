@@ -204,6 +204,7 @@ html, body {
 .flexbox {
     display: flex;
     flex-direction: row;
+    align-items: center;
 }
 
 .flex-fixed-size {
@@ -705,6 +706,13 @@ svg {
     margin-left: 0.5em;
 }
 
+#ros-config-select,
+#ros-config-select > option {
+    font-size: 1em;
+    font-family: sans-serif;
+    font-weight: bold;
+}
+
 #ros-query-select {
     max-width: 100%;
 }
@@ -884,7 +892,7 @@ hr {
 
 select {
     background: transparent;
-    padding: 0.25em;
+    padding: 0.1em;
     border: 1px solid grey;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -893,8 +901,10 @@ select {
 
 
 #hierarchy-container {
+  position: relative;
+  height: 15em;
+  border: 1px solid lightgrey;
   overflow-y: auto;
-  height: 450px;
 }
 
 .tree-node circle {
@@ -906,10 +916,16 @@ select {
 
 .tree-node text {
   cursor: pointer;
+  user-select: none;
 }
 
 .link {
   fill: none;
   stroke: #ccc;
   stroke-width: 1px;
+}
+
+
+#ros-system-view button {
+  min-width: 2em;
 }

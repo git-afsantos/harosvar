@@ -1,6 +1,9 @@
 // example:
 // https://codepen.io/brendandougan/pen/PpEzRp
 
+// tree with tabular data
+// https://observablehq.com/@d3/indented-tree
+
 "use strict";
 
 /*jshint esversion: 6 */
