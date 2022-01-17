@@ -759,6 +759,7 @@ THE SOFTWARE.
             this.$calcButton = this.$("#ros-system-calc");
             this.$infoButton = this.$("#ros-system-info");
             this.$featureModelContainer = this.$("#feature-model-container");
+            this.$valueContainer = this.$("#feature-value-container");
 
             this.infoModal = new views.SystemInfo({ el: this.$("#ros-system-info-modal") });
             this.infoModal.hide();
@@ -804,7 +805,7 @@ THE SOFTWARE.
             let h = Math.min($(window).height() - 120, 800);
             this.$el.height(h);
             // this.resetViewport();
-            let oh = this.$header.innerHeight();
+            let oh = this.$header.outerHeight() + this.$valueContainer.outerHeight() + 5;
             this.$featureModelContainer.height(h - oh);
             console.log(`resize $el to ${h} and $featureModelContainer to ${h - oh}`);
         },
