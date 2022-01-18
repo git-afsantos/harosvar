@@ -224,6 +224,6 @@ p {
     font-family: monospace;
 }
 
-#hierarchy-container .tree-node text {
+#feature-model-container .tree-node text {
     font-size: .75em;
 }

@@ -27,6 +27,7 @@ class MyTree {
             return "M" + d.parent.y + "," + d.parent.x
                 + "V" + d.x + "H" + d.y;
         };
+
         this.collapse = (d) => {
             if (d.children) {
                 d._children = d.children;
@@ -34,6 +35,7 @@ class MyTree {
                 d.children = null;
             }
         };
+
         this.click = (event, d) => {
             if (d.children) {
                 d._children = d.children;
@@ -43,27 +45,72 @@ class MyTree {
                 d.children = d._children;
                 d._children = null;
             }
+
             this.update(d);
         };
-        this.onTextClick = (event, d) => {
-            let previous = d.featureSelected;
-            var value, color;
-            if (d.featureSelected) {
-                d.featureSelected = false;
-                color = "firebrick";
-            } else if (d.featureSelected === false) {
-                d.featureSelected = null;
-                color = "black"
+
+        this.onValueLabelClick = (event, d) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            // skip the root
+            if (d.parent == null) { return; }
+            if (d.data.value) {
+                d.data.value = false;
+            } else if (d.data.value === false) {
+                d.data.value = null;
             } else {
-                d.featureSelected = true;
-                color = "forestgreen";
+                d.data.value = true;
             }
-            d3.select(event.currentTarget)
-                .style("fill", color);
-            console.log(`${previous} -> ${d.featureSelected}`);
+            this.propagateSelection(d);
+            this.render();
         };
+
+        this.propagateSelection = (source) => {
+            var n;
+            if (source.data.value) {
+                n = source.parent;
+                // skip the root
+                while (n != null && n.parent != null) {
+                    n.data.value = true;
+                    n = n.parent;
+                }
+            } else {
+                if (!source.children) { return; }
+                var stack = [...source.children];
+                while (stack.length > 0) {
+                    n = stack.pop();
+                    n.data.value = source.data.value;
+                    if (n.children) {
+                        for (var child of n.children) {
+                            stack.push(child);
+                        }
+                    }
+                }
+            }
+        };
+
+        this.render = () => {
+          this.svg.selectAll('g.tree-node')
+              .each(function (d) {
+                  var text, color;
+                  if (d.parent == null) { return; }
+                  if (d.data.value) {
+                      color = "forestgreen";
+                      text = "present";
+                  } else if (d.data.value === false) {
+                      color = "firebrick";
+                      text = "absent";
+                  } else {
+                      color = "black"
+                      text = "--------";
+                  }
+                  let node = d3.select(this);
+                  node.select("text").style("fill", color);
+                  node.select("text.value-label").text(text);
+              });
+        };
+
         this.update = (source) => {
-            this.width = 800;
             // Compute the new tree layout.
             let nodes = this.tree(this.root);
             let nodesSort = [];
@@ -81,26 +128,28 @@ class MyTree {
             this.svg.transition()
                 .duration(this.duration)
                 .attr("height", this.height);
-            d3.select('#feature-model-container>svg')
+            this.svgElement.transition()
+                .duration(this.duration)
                 .style("height", this.height + 'px');
+
             // Update the nodes…
             let node = this.svg.selectAll('g.tree-node')
                 .data(nodesSort, function (d) {
                 return d.id || (d.id = ++this.i);
             });
+
             // Enter any new nodes at the parent's previous position.
             var nodeEnter = node.enter().append('g')
                 .attr('class', 'tree-node')
                 .attr('transform', function () {
                 return 'translate(' + source.y0 + ',' + source.x0 + ')';
             })
-                ;
+                .on('click', this.click);
             nodeEnter.append('circle')
                 .attr('r', 1e-6)
                 .style('fill', function (d) {
                 return d._children ? 'lightsteelblue' : '#fff';
-            })
-                .on('click', this.click);
+            });
             nodeEnter.append('text')
                 .attr('x', function (d) {
                 return d.children || d._children ? 10 : 10;
@@ -118,11 +167,43 @@ class MyTree {
                 }
             })
                 .style('fill-opacity', 1e-6)
-                .on('click', this.onTextClick)
-                .each((d) => { d.featureSelected = null; });
+                .each((d) => {
+                    if (!d.parent) {
+                        d.data.value = true;
+                    } else {
+                        d.data.value = null;
+                    }
+                });
             nodeEnter.append('svg:title').text(function (d) {
-                return d.data.name;
+                return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
             });
+            nodeEnter.append("text")
+                .attr('class', 'value-label')
+                .attr("dx", function (d) {
+                    // translate of parent plus offset of root
+                    var offsetX = source.y0 + 20;
+                    // add translate of self
+                    if (d.parent) { offsetX += 20; }
+                    return "-" + offsetX;
+                })
+                .attr("dy", ".35em")
+                .attr("x", this.width)
+                .attr("text-anchor", "end")
+                .text(function (d) {
+                    if (!d.parent) { return "present"; }
+                    if (!d.data.value) {
+                        return "--------";
+                    }
+                    if (d.data.value.length > 10) {
+                        return d.data.value.substring(0, 10) + "...";
+                    }
+                    else {
+                        return d.data.value;
+                    }
+                })
+                .style('fill-opacity', 1e-6)
+                .on('click', this.onValueLabelClick);
+
             // Transition nodes to their new position.
             let nodeUpdate = node.merge(nodeEnter)
                 .transition()
@@ -132,11 +213,11 @@ class MyTree {
                 return 'translate(' + d.y + ',' + d.x + ')';
             });
             nodeUpdate.select('circle')
-                .attr('r', 4.5)
+                .attr('r', 5)
                 .style('fill', function (d) {
                 return d._children ? 'lightsteelblue' : '#fff';
             });
-            nodeUpdate.select('text')
+            nodeUpdate.selectAll('text')
                 .style('fill-opacity', 1);
             // Transition exiting nodes to the parent's new position (and remove the nodes)
             var nodeExit = node.exit().transition()
@@ -148,7 +229,7 @@ class MyTree {
                 .remove();
             nodeExit.select('circle')
                 .attr('r', 1e-6);
-            nodeExit.select('text')
+            nodeExit.selectAll('text')
                 .style('fill-opacity', 1e-6);
             // Update the links…
             var link = this.svg.selectAll('path.link')
@@ -185,7 +266,7 @@ class MyTree {
     }
 
     $onInit(data) {
-        this.margin = { top: 20, right: 10, bottom: 20, left: 10 };
+        this.margin = { top: 20, right: 10, bottom: 20, left: 20 };
         this.width = 1400 - this.margin.right - this.margin.left;
         this.height = 800 - this.margin.top - this.margin.bottom;
         this.barHeight = 20;
@@ -193,7 +274,7 @@ class MyTree {
         this.i = 0;
         this.duration = 450;
         this.tree = tree().size([this.width, this.height]);
-        this.tree.nodeSize([0, 30]);
+        this.tree.nodeSize([0, 20]);
         this.root = this.tree(hierarchy(data));
         this.root.each((d) => {
             d.name = d.id; //transferring name to a name variable
@@ -202,13 +283,43 @@ class MyTree {
         });
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
-        this.svg = select('#feature-model-container').append('svg')
+
+        this.svgElement = select('#feature-model-container').append('svg');
             //.attr('width', this.width + this.margin.right + this.margin.left + 'px')
             //.attr('height', this.height + this.margin.top + this.margin.bottom + 'px')
-            .append('g')
+
+        this.svg = this.svgElement.append('g')
             .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
-        // this.root.children.forEach(this.collapse);
+
+        this.labelFeature = this.svg.append("text")
+            .attr("dx", "-0.5em")
+            .attr("y", 0)
+            .attr("x", 0)
+            //.attr("text-anchor", "end")
+            .attr("font-weight", "bold")
+            .text("Feature");
+
+        this.labelValue = this.svg.append("text")
+            .attr("dx", "-0.5em")
+            .attr("y", 0)
+            .attr("x", this.width)
+            .attr("text-anchor", "end")
+            .attr("font-weight", "bold")
+            .text("Value");
+
+        let offsetY = this.margin.top + 20;
+        this.svg = this.svgElement.append('g')
+            .attr('transform', 'translate(' + this.margin.left + ',' + offsetY + ')');
+
+        this.root.children.forEach(this.collapse);
         this.update(this.root);
+    }
+
+    setWidth(w) {
+        this.width = w - this.margin.right;
+        this.labelValue.attr("x", this.width);
+        this.svg.selectAll('text.value-label')
+            .attr("x", this.width);
     }
 }
 ;

@@ -767,6 +767,8 @@ THE SOFTWARE.
 
             this.featureModel = new models.FeatureModel();
             this.listenTo(this.featureModel, "sync", this.onSyncFeatureModel);
+
+            this.svgTree = null;
         },
 
         render: function () {
@@ -776,8 +778,9 @@ THE SOFTWARE.
         },
 
         onSyncFeatureModel: function (model) {
-            let myTree = new MyTree();
-            myTree.$onInit(_.clone(model.attributes));
+            this.svgTree = new MyTree();
+            this.svgTree.$onInit(_.clone(model.attributes));
+            this.adjustTreeWidth();
         },
 
         calcComputationGraph: function () {
@@ -807,7 +810,15 @@ THE SOFTWARE.
             // this.resetViewport();
             let oh = this.$header.outerHeight() + this.$valueContainer.outerHeight() + 5;
             this.$featureModelContainer.height(h - oh);
-            console.log(`resize $el to ${h} and $featureModelContainer to ${h - oh}`);
+            this.adjustTreeWidth();
         },
+
+        adjustTreeWidth: function () {
+            if (this.svgTree != null) {
+                // take scroll bar into account
+                let w = this.$el.width() - 30;
+                this.svgTree.setWidth(w);
+            }
+        }
     });
 })();

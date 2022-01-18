@@ -903,7 +903,7 @@ select {
 #feature-model-container {
   height: 15em;
   border: 1px solid lightgrey;
-  overflow-y: auto;
+  overflow-y: scroll;
 }
 
 .tree-node circle {
