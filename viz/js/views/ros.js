@@ -778,6 +778,7 @@ THE SOFTWARE.
         },
 
         onSyncFeatureModel: function (model) {
+            console.log("received model data", model.attributes);
             this.svgTree = new MyTree();
             this.svgTree.$onInit(_.clone(model.attributes));
             this.adjustTreeWidth();
@@ -802,6 +803,7 @@ THE SOFTWARE.
         setProjectId: function (projectId) {
             this.featureModel.projectId = projectId;
             this.featureModel.fetch();
+            console.log("fetching", this.featureModel.url());
         },
 
         onResize: function () {

@@ -11,10 +11,6 @@
     'use strict';
 }());
 
-let tree = d3.tree;
-let hierarchy = d3.hierarchy;
-let select = d3.select;
-
 class MyTree {
     constructor() {
         this.connector = function (d) {
@@ -47,67 +43,80 @@ class MyTree {
             }
 
             this.update(d);
+            this.render();
         };
 
         this.onValueLabelClick = (event, d) => {
             event.preventDefault();
             event.stopImmediatePropagation();
             // skip the root
-            if (d.parent == null) { return; }
+            if (d.depth == 0) { return; }
             if (d.data.value) {
-                d.data.value = false;
+                d.data.value = d.data.userValue = false;
             } else if (d.data.value === false) {
-                d.data.value = null;
+                d.data.value = d.data.userValue = null;
             } else {
-                d.data.value = true;
+                d.data.value = d.data.userValue = true;
             }
             this.propagateSelection(d);
             this.render();
         };
 
         this.propagateSelection = (source) => {
-            var n;
-            if (source.data.value) {
-                n = source.parent;
-                // skip the root
-                while (n != null && n.parent != null) {
-                    n.data.value = true;
-                    n = n.parent;
-                }
-            } else {
-                if (!source.children) { return; }
-                var stack = [...source.children];
-                while (stack.length > 0) {
-                    n = stack.pop();
-                    n.data.value = source.data.value;
-                    if (n.children) {
-                        for (var child of n.children) {
-                            stack.push(child);
-                        }
+            var n = source.parent;
+            // skip the root
+            while (n != null && n.depth > 0) {
+                this.recalculateValue(n);
+                n = n.parent;
+            }
+            let value = source.data.value;
+            if (value || !source.data.children) { return; }
+            let stack = [...source.data.children];
+            while (stack.length > 0) {
+                let datum = stack.pop();
+                datum.value = value;
+                if (datum.children) {
+                    for (var child of datum.children) {
+                        stack.push(child);
                     }
                 }
             }
         };
 
-        this.render = () => {
-          this.svg.selectAll('g.tree-node')
-              .each(function (d) {
-                  var text, color;
-                  if (d.parent == null) { return; }
-                  if (d.data.value) {
-                      color = "forestgreen";
-                      text = "present";
-                  } else if (d.data.value === false) {
-                      color = "firebrick";
-                      text = "absent";
-                  } else {
-                      color = "black"
-                      text = "--------";
-                  }
-                  let node = d3.select(this);
-                  node.select("text").style("fill", color);
-                  node.select("text.value-label").text(text);
-              });
+        this.recalculateValue = (d) => {
+            if (!d.children) { return; }
+            var value = null;
+            for (var child of d.children) {
+                if (child.data.value) { value = true; }
+            }
+            d.data.value = value || d.data.userValue;
+        };
+
+        this.render = (nodes) => {
+            if (!nodes) { nodes = this.svg.selectAll('g.tree-node'); }
+            nodes.each(function (d) {
+                var text, color;
+                // if (d.depth == 0) { return; }
+                if (d.data.value) {
+                    color = "forestgreen";
+                    text = "present";
+                } else if (d.data.value === false) {
+                    color = "firebrick";
+                    text = "absent";
+                } else if (d.data.userValue) {
+                    color = "forestgreen";
+                    text = "present";
+                } else if (d.data.userValue === false) {
+                    color = "firebrick";
+                    text = "absent";
+                } else {
+                    color = "black"
+                    text = "--------";
+                }
+                let node = d3.select(this);
+                node.select("text").style("fill", color);
+                node.select("text.value-label").text(text);
+            });
         };
 
         this.update = (source) => {
@@ -135,74 +144,57 @@ class MyTree {
             // Update the nodes…
             let node = this.svg.selectAll('g.tree-node')
                 .data(nodesSort, function (d) {
-                return d.id || (d.id = ++this.i);
-            });
+                    return d.id || (d.id = ++this.i);
+                });
 
             // Enter any new nodes at the parent's previous position.
             var nodeEnter = node.enter().append('g')
                 .attr('class', 'tree-node')
                 .attr('transform', function () {
-                return 'translate(' + source.y0 + ',' + source.x0 + ')';
-            })
+                    return 'translate(' + source.y0 + ',' + source.x0 + ')';
+                })
                 .on('click', this.click);
             nodeEnter.append('circle')
                 .attr('r', 1e-6)
                 .style('fill', function (d) {
-                return d._children ? 'lightsteelblue' : '#fff';
-            });
+                    return d._children ? 'lightsteelblue' : '#fff';
+                });
             nodeEnter.append('text')
                 .attr('x', function (d) {
-                return d.children || d._children ? 10 : 10;
-            })
+                    return d.children || d._children ? 10 : 10;
+                })
                 .attr('dy', '.35em')
                 .attr('text-anchor', function (d) {
-                return d.children || d._children ? 'start' : 'start';
-            })
+                    return d.children || d._children ? 'start' : 'start';
+                })
                 .text(function (d) {
-                if (d.data.name.length > 20) {
-                    return d.data.name.substring(0, 20) + '...';
-                }
-                else {
-                    return d.data.name;
-                }
-            })
-                .style('fill-opacity', 1e-6)
-                .each((d) => {
-                    if (!d.parent) {
-                        d.data.value = true;
-                    } else {
-                        d.data.value = null;
+                    if (d.data.name.length > 20) {
+                        return d.data.name.substring(0, 20) + '...';
                     }
-                });
-            nodeEnter.append('svg:title').text(function (d) {
-                return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
-            });
+                    else {
+                        return d.data.name;
+                    }
+                })
+                .style('fill-opacity', 1e-6);
             nodeEnter.append("text")
                 .attr('class', 'value-label')
                 .attr("dx", function (d) {
-                    // translate of parent plus offset of root
-                    var offsetX = source.y0 + 20;
-                    // add translate of self
-                    if (d.parent) { offsetX += 20; }
-                    return "-" + offsetX;
+                    return -20 * (d.depth + 1);
                 })
                 .attr("dy", ".35em")
                 .attr("x", this.width)
                 .attr("text-anchor", "end")
                 .text(function (d) {
-                    if (!d.parent) { return "present"; }
-                    if (!d.data.value) {
-                        return "--------";
-                    }
-                    if (d.data.value.length > 10) {
-                        return d.data.value.substring(0, 10) + "...";
-                    }
-                    else {
-                        return d.data.value;
-                    }
+                    if (d.depth == 0) { return "present"; }
+                    if (d.data.value == null) { return "--------"; }
+                    if (d.data.value) { return "present"; }
+                    return "absent";
                 })
                 .style('fill-opacity', 1e-6)
                 .on('click', this.onValueLabelClick);
+            nodeEnter.append('svg:title').text(function (d) {
+                return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
+            });
 
             // Transition nodes to their new position.
             let nodeUpdate = node.merge(nodeEnter)
@@ -210,53 +202,70 @@ class MyTree {
                 .duration(this.duration);
             nodeUpdate
                 .attr('transform', function (d) {
-                return 'translate(' + d.y + ',' + d.x + ')';
-            });
+                    return 'translate(' + d.y + ',' + d.x + ')';
+                });
             nodeUpdate.select('circle')
                 .attr('r', 5)
                 .style('fill', function (d) {
-                return d._children ? 'lightsteelblue' : '#fff';
-            });
+                    return d._children ? 'lightsteelblue' : '#fff';
+                });
             nodeUpdate.selectAll('text')
                 .style('fill-opacity', 1);
+
             // Transition exiting nodes to the parent's new position (and remove the nodes)
             var nodeExit = node.exit().transition()
                 .duration(this.duration);
             nodeExit
                 .attr('transform', function (d) {
-                return 'translate(' + source.y + ',' + source.x + ')';
-            })
+                    return 'translate(' + source.y + ',' + source.x + ')';
+                })
                 .remove();
             nodeExit.select('circle')
                 .attr('r', 1e-6);
             nodeExit.selectAll('text')
                 .style('fill-opacity', 1e-6);
+
             // Update the links…
             var link = this.svg.selectAll('path.link')
                 .data(links, function (d) {
-                // return d.target.id;
-                var id = d.id + '->' + d.parent.id;
-                return id;
-            });
+                    // return d.target.id;
+                    var id = d.id + '->' + d.parent.id;
+                    return id;
+                });
             // Enter any new links at the parent's previous position.
             let linkEnter = link.enter().insert('path', 'g')
                 .attr('class', 'link')
                 .attr('d', (d) => {
-                var o = { x: source.x0, y: source.y0, parent: { x: source.x0, y: source.y0 } };
-                return this.connector(o);
-            });
+                    return this.connector({
+                        x: source.x0,
+                        y: source.y0,
+                        parent: {
+                            x: source.x0,
+                            y: source.y0
+                        }
+                    });
+                });
+
             // Transition links to their new position.
             link.merge(linkEnter).transition()
                 .duration(this.duration)
                 .attr('d', this.connector);
+
             // // Transition exiting nodes to the parent's new position.
             link.exit().transition()
                 .duration(this.duration)
                 .attr('d', (d) => {
-                var o = { x: source.x, y: source.y, parent: { x: source.x, y: source.y } };
-                return this.connector(o);
-            })
+                    return this.connector({
+                        x: source.x,
+                        y: source.y,
+                        parent: {
+                            x: source.x,
+                            y: source.y
+                        }
+                    });
+                })
                 .remove();
+
             // Stash the old positions for transition.
             nodesSort.forEach(function (d) {
                 d.x0 = d.x;
@@ -273,9 +282,9 @@ class MyTree {
         this.barWidth = this.width * .8;
         this.i = 0;
         this.duration = 450;
-        this.tree = tree().size([this.width, this.height]);
+        this.tree = d3.tree().size([this.width, this.height]);
         this.tree.nodeSize([0, 20]);
-        this.root = this.tree(hierarchy(data));
+        this.root = this.tree(d3.hierarchy(data));
         this.root.each((d) => {
             d.name = d.id; //transferring name to a name variable
             d.id = this.i; //Assigning numerical Ids
@@ -284,7 +293,7 @@ class MyTree {
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
 
-        this.svgElement = select('#feature-model-container').append('svg');
+        this.svgElement = d3.select('#feature-model-container').append('svg');
             //.attr('width', this.width + this.margin.right + this.margin.left + 'px')
             //.attr('height', this.height + this.margin.top + this.margin.bottom + 'px')
 
@@ -300,7 +309,7 @@ class MyTree {
             .text("Feature");
 
         this.labelValue = this.svg.append("text")
-            .attr("dx", "-0.5em")
+            .attr("dx", -20)
             .attr("y", 0)
             .attr("x", this.width)
             .attr("text-anchor", "end")
@@ -313,6 +322,7 @@ class MyTree {
 
         this.root.children.forEach(this.collapse);
         this.update(this.root);
+        this.render();
     }
 
     setWidth(w) {
@@ -321,7 +331,4 @@ class MyTree {
         this.svg.selectAll('text.value-label')
             .attr("x", this.width);
     }
-}
-;
-//let myTree = new MyTree();
-//myTree.$onInit();
+};
