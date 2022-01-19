@@ -11,6 +11,20 @@
     'use strict';
 }());
 
+function conditionToString(value, automatic) {
+    let suffix = automatic ? " (!)" : "";
+    switch (value) {
+        case null:
+            return `<unknown>${suffix}`;
+        case true:
+            return `true${suffix}`;
+        case false:
+            return `false${suffix}`;
+        default:
+            return `${value}${suffix}`;
+    }
+}
+
 class MyTree {
     constructor() {
         this.connector = function (d) {
@@ -52,11 +66,14 @@ class MyTree {
             // skip the root
             if (d.depth == 0) { return; }
             if (d.data.value) {
-                d.data.value = d.data.userValue = false;
+                d.data.value = false;
+                d.data.userValue = false;
             } else if (d.data.value === false) {
-                d.data.value = d.data.userValue = null;
+                d.data.value = null;
+                d.data.userValue = null;
             } else {
-                d.data.value = d.data.userValue = true;
+                d.data.value = true;
+                d.data.userValue = true;
             }
             this.propagateSelection(d);
             this.render();
@@ -71,10 +88,16 @@ class MyTree {
             }
             let value = source.data.value;
             if (value || !source.data.children) { return; }
+            var fv;
+            if (value == null) {
+                fv = (d) => { return d.userValue; };
+            } else {
+                fv = () => { return value; }
+            }
             let stack = [...source.data.children];
             while (stack.length > 0) {
                 let datum = stack.pop();
-                datum.value = value;
+                datum.value = fv(datum);
                 if (datum.children) {
                     for (var child of datum.children) {
                         stack.push(child);
@@ -96,22 +119,23 @@ class MyTree {
             if (!nodes) { nodes = this.svg.selectAll('g.tree-node'); }
             nodes.each(function (d) {
                 var text, color;
+                let automatic = d.data.value !== d.data.userValue;
                 // if (d.depth == 0) { return; }
                 if (d.data.value) {
                     color = "forestgreen";
-                    text = "present";
+                    text = conditionToString(true, automatic);
                 } else if (d.data.value === false) {
                     color = "firebrick";
-                    text = "absent";
+                    text = conditionToString(false, automatic);
                 } else if (d.data.userValue) {
                     color = "forestgreen";
-                    text = "present";
+                    text = conditionToString(true, automatic);
                 } else if (d.data.userValue === false) {
                     color = "firebrick";
-                    text = "absent";
+                    text = conditionToString(false, automatic);
                 } else {
                     color = "black"
-                    text = "--------";
+                    text = conditionToString(null, automatic);
                 }
                 let node = d3.select(this);
                 node.select("text").style("fill", color);
@@ -125,6 +149,8 @@ class MyTree {
             let nodesSort = [];
             nodes.eachBefore(function (n) {
                 nodesSort.push(n);
+                if (n.data.value === undefined) { n.data.value = null; }
+                if (n.data.userValue === undefined) { n.data.userValue = null; }
             });
             // this.height = Math.max(500, nodesSort.length * this.barHeight + this.margin.top + this.margin.bottom);
             this.height = Math.max(300, nodesSort.length * this.barHeight + this.margin.top + this.margin.bottom);
@@ -185,10 +211,8 @@ class MyTree {
                 .attr("x", this.width)
                 .attr("text-anchor", "end")
                 .text(function (d) {
-                    if (d.depth == 0) { return "present"; }
-                    if (d.data.value == null) { return "--------"; }
-                    if (d.data.value) { return "present"; }
-                    return "absent";
+                    if (d.depth == 0) { return "true"; }
+                    return conditionToString(d.data.value, true);
                 })
                 .style('fill-opacity', 1e-6)
                 .on('click', this.onValueLabelClick);
