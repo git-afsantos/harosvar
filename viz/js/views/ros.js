@@ -759,7 +759,6 @@ THE SOFTWARE.
             this.$calcButton = this.$("#ros-system-calc");
             this.$infoButton = this.$("#ros-system-info");
             this.$featureModelContainer = this.$("#feature-model-container");
-            this.$valueContainer = this.$("#feature-value-container");
 
             this.infoModal = new views.SystemInfo({ el: this.$("#ros-system-info-modal") });
             this.infoModal.hide();
@@ -778,7 +777,6 @@ THE SOFTWARE.
         },
 
         onSyncFeatureModel: function (model) {
-            console.log("received model data", model.attributes);
             if (this.svgTree == null) {
                 this.svgTree = new MyTree();
                 this.svgTree.$onInit(_.clone(model.attributes));
@@ -805,15 +803,14 @@ THE SOFTWARE.
         setProjectId: function (projectId) {
             this.featureModel.projectId = projectId;
             this.featureModel.fetch();
-            console.log("fetching", this.featureModel.url());
         },
 
         onResize: function () {
             let h = Math.min($(window).height() - 120, 800);
             this.$el.height(h);
             // this.resetViewport();
-            let oh = this.$header.outerHeight() + this.$valueContainer.outerHeight() + 5;
-            this.$featureModelContainer.height(h - oh);
+            h -= this.$header.outerHeight();
+            this.$featureModelContainer.height(h);
             // this.adjustTreeWidth();
         },
 

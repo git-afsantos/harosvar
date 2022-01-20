@@ -125,26 +125,28 @@ class MyTree {
         this.render = (nodes) => {
             if (!nodes) { nodes = this.svg.selectAll("g.tree-node"); }
             nodes.each(function (d) {
+                let selected = false;
+                let discarded = false;
                 let icon = ICON_MAYBE;
-                let color = "black";
                 let automatic = d.data.value !== d.data.userValue;
-                // if (d.depth == 0) { return; }
+                if (d.depth == 0) { return; }
                 if (d.data.value) {
-                    color = "forestgreen";
                     icon = ICON_TRUE;
+                    selected = true;
                 } else if (d.data.value === false) {
-                    color = "firebrick";
                     icon = ICON_FALSE;
+                    discarded = true;
                 } else if (d.data.userValue) {
-                    color = "forestgreen";
                     icon = ICON_TRUE;
+                    selected = true;
                 } else if (d.data.userValue === false) {
-                    color = "firebrick";
                     icon = ICON_FALSE;
+                    discarded = true;
                 }
-                let node = d3.select(this);
-                node.select("text.feature-label")
-                    .style("fill", color)
+                d3.select(this)
+                    .select("text.feature-label")
+                    .classed("selected", selected)
+                    .classed("discarded", discarded)
                     .select("tspan")
                     .text(automatic ? `(${icon})` : icon);
             });
@@ -182,21 +184,16 @@ class MyTree {
 
             // Enter any new nodes at the parent's previous position.
             var nodeEnter = node.enter().append("g")
-                .attr("class", "tree-node")
+                .classed("tree-node", true)
                 .attr("transform", function () {
                     return "translate(" + source.y0 + "," + source.x0 + ")";
                 })
                 .on("click", this.click);
             nodeEnter.append("circle")
-                .attr("r", 1e-6)
-                .style("fill", function (d) {
-                    return d._children ? "lightsteelblue" : "#fff";
-                });
+                .attr("r", 1e-6);
             let tlabel = nodeEnter.append("text")
-                .attr("class", "feature-label")
-                .attr("x", function (d) {
-                    return d.children || d._children ? NODE_SIZE / 2 : NODE_SIZE / 2;
-                })
+                .classed("feature-label", true)
+                .attr("x", NODE_SIZE / 2)
                 .attr("dy", ".35em")
                 .attr("text-anchor", "start")
                 .text(function (d) {
@@ -227,7 +224,7 @@ class MyTree {
             nodeUpdate.select("circle")
                 .attr("r", NODE_SIZE / 4)
                 .style("fill", function (d) {
-                    return d._children ? "lightsteelblue" : "#fff";
+                    return d._children != null ? "lightsteelblue" : "white";
                 });
             nodeUpdate.selectAll("text")
                 .style("fill-opacity", 1);

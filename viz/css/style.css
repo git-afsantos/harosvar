@@ -908,10 +908,20 @@ select {
 }
 
 #feature-model-container .tree-node circle {
-  fill: #fff;
+  fill: white;
   stroke: steelblue;
   stroke-width: 1px;
   cursor: pointer;
+}
+
+/*
+#feature-model-container .tree-node circle.collapsed {
+  fill: lightsteelblue;
+}
+*/
+
+#feature-model-container .tree-node circle:hover {
+  stroke-width: 2px;
 }
 
 #feature-model-container .tree-node text {
