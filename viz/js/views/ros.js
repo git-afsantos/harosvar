@@ -77,6 +77,8 @@ THE SOFTWARE.
                     configId = this.collection.first().id;
                 this.$configSelect.val(configId);
                 this.onSelect();
+                // FIXME
+                this.onResize();
             }
 
             this.systemView.setProjectId(this.projectId);
@@ -114,7 +116,8 @@ THE SOFTWARE.
 
         onResize: function () {
             this.systemView.onResize();
-            this.graph.onResize();
+            const offsetY = this.$("#ros-graph-view-header").outerHeight();
+            this.graph.onResize(offsetY);
         },
 
         optionTemplate: _.template("<option><%= data.id %></option>",
@@ -612,8 +615,10 @@ THE SOFTWARE.
         },
 
 
-        onResize: function () {
-            this.$el.height(Math.min($(window).height() - 120, 800));
+        onResize: function (offsetY) {
+            offsetY = offsetY || 0;
+            const h = Math.min($(window).height() - 120, 800);
+            this.$el.height(h - offsetY);
             this.resetViewport();
         },
 
