@@ -225,23 +225,26 @@ p {
 }
 
 #feature-model-container .tree-node text {
-    font-size: .75em;
-    fill: black;
+  fill: black;
+  font-size: .75em;
 }
 
-#feature-model-container .tree-node:first-of-type text,
 #feature-model-container .tree-node text:hover {
-    font-weight: bold;
+  font-weight: bold;
+}
+
+#feature-model-container .tree-node:first-of-type text {
+  font-weight: bold;
 }
 
 #feature-model-container .tree-node text.feature-label.selected {
-    font-weight: bold;
-    fill: darkgreen;
+  fill: darkgreen;
+  font-weight: bold;
 }
 
 #feature-model-container .tree-node text.feature-label.discarded {
-    font-weight: bold;
-    fill: firebrick;
+  fill: firebrick;
+  font-weight: bold;
 }
 
 /*
