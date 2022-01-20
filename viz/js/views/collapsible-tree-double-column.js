@@ -8,18 +8,21 @@
 
 /*jshint esversion: 6 */
 (function () {
-    "use strict";
+    'use strict';
 }());
 
-const NODE_SIZE = 25;
-const ICON_TRUE = "\u2713";
-const ICON_FALSE = "\u2716"; // "\u00d7";
-const ICON_MAYBE = "";
-
-function selectionIcon(value, automatic) {
-  if (value) { return automatic ? `(${ICON_TRUE})` : ICON_TRUE; }
-  if (value === false) { return automatic ? `(${ICON_FALSE})` : ICON_FALSE; }
-  return ICON_MAYBE;
+function conditionToString(value, automatic) {
+    let suffix = automatic ? " (!)" : "";
+    switch (value) {
+        case null:
+            return `<unknown>${suffix}`;
+        case true:
+            return `true${suffix}`;
+        case false:
+            return `false${suffix}`;
+        default:
+            return `${value}${suffix}`;
+    }
 }
 
 class MyTree {
@@ -57,24 +60,20 @@ class MyTree {
             this.render();
         };
 
-        this.onFeatureLabelClick = (event, d) => {
+        this.onValueLabelClick = (event, d) => {
             event.preventDefault();
             event.stopImmediatePropagation();
             // skip the root
             if (d.depth == 0) { return; }
-            if (d.data.userValue !== d.data.value) {
-                d.data.userValue = d.data.value;
+            if (d.data.value) {
+                d.data.value = false;
+                d.data.userValue = false;
+            } else if (d.data.value === false) {
+                d.data.value = null;
+                d.data.userValue = null;
             } else {
-                if (d.data.value) {
-                    d.data.value = false;
-                    d.data.userValue = false;
-                } else if (d.data.value === false) {
-                    d.data.value = null;
-                    d.data.userValue = null;
-                } else {
-                    d.data.value = true;
-                    d.data.userValue = true;
-                }
+                d.data.value = true;
+                d.data.userValue = true;
             }
             this.propagateSelection(d);
             this.render();
@@ -108,12 +107,6 @@ class MyTree {
         };
 
         this.recalculateValue = (d) => {
-            if (d.parent != null) {
-                if (d.parent.data.value === false) {
-                    d.data.value = false;
-                    return;
-                }
-            }
             if (!d.children) { return; }
             var value = null;
             for (var child of d.children) {
@@ -123,30 +116,30 @@ class MyTree {
         };
 
         this.render = (nodes) => {
-            if (!nodes) { nodes = this.svg.selectAll("g.tree-node"); }
+            if (!nodes) { nodes = this.svg.selectAll('g.tree-node'); }
             nodes.each(function (d) {
-                let icon = ICON_MAYBE;
-                let color = "black";
+                var text, color;
                 let automatic = d.data.value !== d.data.userValue;
                 // if (d.depth == 0) { return; }
                 if (d.data.value) {
                     color = "forestgreen";
-                    icon = ICON_TRUE;
+                    text = conditionToString(true, automatic);
                 } else if (d.data.value === false) {
                     color = "firebrick";
-                    icon = ICON_FALSE;
+                    text = conditionToString(false, automatic);
                 } else if (d.data.userValue) {
                     color = "forestgreen";
-                    icon = ICON_TRUE;
+                    text = conditionToString(true, automatic);
                 } else if (d.data.userValue === false) {
                     color = "firebrick";
-                    icon = ICON_FALSE;
+                    text = conditionToString(false, automatic);
+                } else {
+                    color = "black"
+                    text = conditionToString(null, automatic);
                 }
                 let node = d3.select(this);
-                node.select("text.feature-label")
-                    .style("fill", color)
-                    .select("tspan")
-                    .text(automatic ? `(${icon})` : icon);
+                node.select("text").style("fill", color);
+                node.select("text.value-label").text(text);
             });
         };
 
@@ -166,53 +159,64 @@ class MyTree {
             nodesSort.forEach((n, i) => {
                 n.x = i * this.barHeight;
             });
-            //d3.select("svg").transition()
+            //d3.select('svg').transition()
             this.svg.transition()
                 .duration(this.duration)
                 .attr("height", this.height);
             this.svgElement.transition()
                 .duration(this.duration)
-                .style("height", this.height + "px");
+                .style("height", this.height + 'px');
 
             // Update the nodes…
-            let node = this.svg.selectAll("g.tree-node")
+            let node = this.svg.selectAll('g.tree-node')
                 .data(nodesSort, function (d) {
                     return d.id || (d.id = ++this.i);
                 });
 
             // Enter any new nodes at the parent's previous position.
-            var nodeEnter = node.enter().append("g")
-                .attr("class", "tree-node")
-                .attr("transform", function () {
-                    return "translate(" + source.y0 + "," + source.x0 + ")";
+            var nodeEnter = node.enter().append('g')
+                .attr('class', 'tree-node')
+                .attr('transform', function () {
+                    return 'translate(' + source.y0 + ',' + source.x0 + ')';
                 })
-                .on("click", this.click);
-            nodeEnter.append("circle")
-                .attr("r", 1e-6)
-                .style("fill", function (d) {
-                    return d._children ? "lightsteelblue" : "#fff";
+                .on('click', this.click);
+            nodeEnter.append('circle')
+                .attr('r', 1e-6)
+                .style('fill', function (d) {
+                    return d._children ? 'lightsteelblue' : '#fff';
                 });
-            let tlabel = nodeEnter.append("text")
-                .attr("class", "feature-label")
-                .attr("x", function (d) {
-                    return d.children || d._children ? NODE_SIZE / 2 : NODE_SIZE / 2;
+            nodeEnter.append('text')
+                .attr('x', function (d) {
+                    return d.children || d._children ? 10 : 10;
                 })
-                .attr("dy", ".35em")
-                .attr("text-anchor", "start")
+                .attr('dy', '.35em')
+                .attr('text-anchor', function (d) {
+                    return d.children || d._children ? 'start' : 'start';
+                })
                 .text(function (d) {
                     if (d.data.name.length > 20) {
-                        return d.data.name.substring(0, 20) + "...";
+                        return d.data.name.substring(0, 20) + '...';
                     }
                     else {
                         return d.data.name;
                     }
                 })
-                .style("fill-opacity", 1e-6)
-                .on("click", this.onFeatureLabelClick);
-            tlabel.append("tspan")
-                .attr("dx", ".5em")
-                .text(function (d) { return selectionIcon(d.data.value); })
-            nodeEnter.append("svg:title").text(function (d) {
+                .style('fill-opacity', 1e-6);
+            nodeEnter.append("text")
+                .attr('class', 'value-label')
+                .attr("dx", function (d) {
+                    return -20 * (d.depth + 1);
+                })
+                .attr("dy", ".35em")
+                .attr("x", this.width)
+                .attr("text-anchor", "end")
+                .text(function (d) {
+                    if (d.depth == 0) { return "true"; }
+                    return conditionToString(d.data.value, true);
+                })
+                .style('fill-opacity', 1e-6)
+                .on('click', this.onValueLabelClick);
+            nodeEnter.append('svg:title').text(function (d) {
                 return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
             });
 
@@ -221,41 +225,41 @@ class MyTree {
                 .transition()
                 .duration(this.duration);
             nodeUpdate
-                .attr("transform", function (d) {
-                    return "translate(" + d.y + "," + d.x + ")";
+                .attr('transform', function (d) {
+                    return 'translate(' + d.y + ',' + d.x + ')';
                 });
-            nodeUpdate.select("circle")
-                .attr("r", NODE_SIZE / 4)
-                .style("fill", function (d) {
-                    return d._children ? "lightsteelblue" : "#fff";
+            nodeUpdate.select('circle')
+                .attr('r', 5)
+                .style('fill', function (d) {
+                    return d._children ? 'lightsteelblue' : '#fff';
                 });
-            nodeUpdate.selectAll("text")
-                .style("fill-opacity", 1);
+            nodeUpdate.selectAll('text')
+                .style('fill-opacity', 1);
 
             // Transition exiting nodes to the parent's new position (and remove the nodes)
             var nodeExit = node.exit().transition()
                 .duration(this.duration);
             nodeExit
-                .attr("transform", function (d) {
-                    return "translate(" + source.y + "," + source.x + ")";
+                .attr('transform', function (d) {
+                    return 'translate(' + source.y + ',' + source.x + ')';
                 })
                 .remove();
-            nodeExit.select("circle")
-                .attr("r", 1e-6);
-            nodeExit.selectAll("text")
-                .style("fill-opacity", 1e-6);
+            nodeExit.select('circle')
+                .attr('r', 1e-6);
+            nodeExit.selectAll('text')
+                .style('fill-opacity', 1e-6);
 
             // Update the links…
-            var link = this.svg.selectAll("path.link")
+            var link = this.svg.selectAll('path.link')
                 .data(links, function (d) {
                     // return d.target.id;
-                    var id = d.id + "->" + d.parent.id;
+                    var id = d.id + '->' + d.parent.id;
                     return id;
                 });
             // Enter any new links at the parent's previous position.
-            let linkEnter = link.enter().insert("path", "g")
-                .attr("class", "link")
-                .attr("d", (d) => {
+            let linkEnter = link.enter().insert('path', 'g')
+                .attr('class', 'link')
+                .attr('d', (d) => {
                     return this.connector({
                         x: source.x0,
                         y: source.y0,
@@ -269,12 +273,12 @@ class MyTree {
             // Transition links to their new position.
             link.merge(linkEnter).transition()
                 .duration(this.duration)
-                .attr("d", this.connector);
+                .attr('d', this.connector);
 
             // // Transition exiting nodes to the parent's new position.
             link.exit().transition()
                 .duration(this.duration)
-                .attr("d", (d) => {
+                .attr('d', (d) => {
                     return this.connector({
                         x: source.x,
                         y: source.y,
@@ -298,12 +302,12 @@ class MyTree {
         this.margin = { top: 20, right: 10, bottom: 20, left: 20 };
         this.width = 1400 - this.margin.right - this.margin.left;
         this.height = 800 - this.margin.top - this.margin.bottom;
-        this.barHeight = NODE_SIZE;
+        this.barHeight = 20;
         this.barWidth = this.width * .8;
         this.i = 0;
         this.duration = 450;
         this.tree = d3.tree().size([this.width, this.height]);
-        this.tree.nodeSize([0, NODE_SIZE]);
+        this.tree.nodeSize([0, 20]);
         this.root = this.tree(d3.hierarchy(data));
         this.root.each((d) => {
             d.name = d.id; //transferring name to a name variable
@@ -313,12 +317,32 @@ class MyTree {
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
 
-        this.svgElement = d3.select("#feature-model-container").append("svg");
-            //.attr("width", this.width + this.margin.right + this.margin.left + "px")
-            //.attr("height", this.height + this.margin.top + this.margin.bottom + "px")
+        this.svgElement = d3.select('#feature-model-container').append('svg');
+            //.attr('width', this.width + this.margin.right + this.margin.left + 'px')
+            //.attr('height', this.height + this.margin.top + this.margin.bottom + 'px')
 
-        this.svg = this.svgElement.append("g")
-            .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
+        this.svg = this.svgElement.append('g')
+            .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
+
+        this.labelFeature = this.svg.append("text")
+            .attr("dx", "-0.5em")
+            .attr("y", 0)
+            .attr("x", 0)
+            //.attr("text-anchor", "end")
+            .attr("font-weight", "bold")
+            .text("Feature");
+
+        this.labelValue = this.svg.append("text")
+            .attr("dx", -20)
+            .attr("y", 0)
+            .attr("x", this.width)
+            .attr("text-anchor", "end")
+            .attr("font-weight", "bold")
+            .text("Value");
+
+        let offsetY = this.margin.top + 20;
+        this.svg = this.svgElement.append('g')
+            .attr('transform', 'translate(' + this.margin.left + ',' + offsetY + ')');
 
         this.root.children.forEach(this.collapse);
         this.update(this.root);
@@ -327,5 +351,8 @@ class MyTree {
 
     setWidth(w) {
         this.width = w - this.margin.right;
+        this.labelValue.attr("x", this.width);
+        this.svg.selectAll('text.value-label')
+            .attr("x", this.width);
     }
 };

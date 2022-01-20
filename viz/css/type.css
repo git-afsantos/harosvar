@@ -227,3 +227,7 @@ p {
 #feature-model-container .tree-node text {
     font-size: .75em;
 }
+
+#feature-model-container .tree-node text.feature-label > tspan {
+    font-weight: bold;
+}

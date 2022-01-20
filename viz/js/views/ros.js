@@ -779,9 +779,11 @@ THE SOFTWARE.
 
         onSyncFeatureModel: function (model) {
             console.log("received model data", model.attributes);
-            this.svgTree = new MyTree();
-            this.svgTree.$onInit(_.clone(model.attributes));
-            this.adjustTreeWidth();
+            if (this.svgTree == null) {
+                this.svgTree = new MyTree();
+                this.svgTree.$onInit(_.clone(model.attributes));
+            }
+            // this.adjustTreeWidth();
         },
 
         calcComputationGraph: function () {
@@ -812,9 +814,10 @@ THE SOFTWARE.
             // this.resetViewport();
             let oh = this.$header.outerHeight() + this.$valueContainer.outerHeight() + 5;
             this.$featureModelContainer.height(h - oh);
-            this.adjustTreeWidth();
+            // this.adjustTreeWidth();
         },
 
+        // unreferenced
         adjustTreeWidth: function () {
             if (this.svgTree != null) {
                 // take scroll bar into account

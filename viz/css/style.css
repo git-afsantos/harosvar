@@ -904,21 +904,22 @@ select {
   height: 15em;
   border: 1px solid lightgrey;
   overflow-y: scroll;
+  overflow-x: auto;
 }
 
-.tree-node circle {
+#feature-model-container .tree-node circle {
   fill: #fff;
   stroke: steelblue;
   stroke-width: 1px;
   cursor: pointer;
 }
 
-.tree-node text {
+#feature-model-container .tree-node text {
   cursor: pointer;
   user-select: none;
 }
 
-.link {
+#feature-model-container .link {
   fill: none;
   stroke: #ccc;
   stroke-width: 1px;
