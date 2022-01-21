@@ -21,6 +21,8 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import argparse
+import json
+from pathlib import Path
 import sys
 
 from haroslaunch.launch_interpreter import LaunchInterpreter
@@ -48,6 +50,13 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
         metavar='SRC',
         nargs=argparse.ZERO_OR_MORE,
         help='Directories containing ROS packages. Defaults to the current directory.',
+    )
+
+    parser.add_argument(
+        '-o',
+        '--output_dir',
+        metavar='DIR',
+        help='Output directory for ROS models. Outputs to screen if not supplied.',
     )
 
     args = parser.parse_args(args=argv)
@@ -138,6 +147,12 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(_bullets(_pretty_params(cg.parameters)))
         print('\nMissing includes:')
         print(_bullets(_pretty_missing_includes(system.missing_files)))
+
+    output_dir: Optional[str] = args['output_dir']
+    if output_dir:
+        data = json.dumps(model.serialize(), ensure_ascii=False, indent=4)
+        model_file = Path(output_dir) / 'model.json'
+        model_file.write_text(data, encoding='utf-8')
 
 
 ###############################################################################

@@ -163,3 +163,12 @@ class ProjectModel:
     systems: Dict[RosSystemId, RosSystem] = attr.Factory(dict)
     # nodes: Dict[str, Executable] = attr.Factory(dict)
     # parse_trees: Dict[FileId, AST] = attr.Factory(dict)
+
+    def serialize(self):
+        return attr.asdict(self, value_serializer=helper_serialize)
+
+
+def helper_serialize(inst, field, value):
+    if isinstance(value, (RosNode, RosParameter)):
+        return value.to_JSON_object()
+    return value

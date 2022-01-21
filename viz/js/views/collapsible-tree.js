@@ -325,4 +325,25 @@ class MyTree {
     setWidth(w) {
         this.width = w - this.margin.right;
     }
+
+    getModelData() {
+        return this.root.data;
+    }
+
+    syncModelData(data) {
+        console.log('sync model data');
+
+        this.i = 0;
+        this.root = this.tree(d3.hierarchy(data));
+        this.root.each((d) => {
+            d.name = d.id; //transferring name to a name variable
+            d.id = this.i; //Assigning numerical Ids
+            this.i++;
+        });
+        this.root.x0 = this.root.x;
+        this.root.y0 = this.root.y;
+
+        this.update(this.root);
+        this.render();
+    }
 };

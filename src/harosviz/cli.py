@@ -21,11 +21,12 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Dict, List, Optional
 
 import argparse
+import json
 import logging
 from pathlib import Path
 import sys
 
-from bottle import route, run, static_file
+from bottle import request, route, run, static_file
 from harosviz import __version__ as current_version
 
 ###############################################################################
@@ -118,8 +119,33 @@ def set_routes(root: str):
     def serve_file(filepath):
         return static_file(filepath, root=root)
 
+    def calculate_computation_graph():
+        return _calculate_computation_graph(root)
+
     route('/')(lambda: serve_file('index.html'))
+    route('/data/<project_id>/feature-model.json', method='PUT')(_update_feature_model)
+    route('/cg/calculate', method='POST')(calculate_computation_graph)
     route('/<filepath:path>')(serve_file)
+
+
+def _update_feature_model(project_id=None):
+    print(f'Update: {project_id}/feature-model.json')
+    data = request.json
+    print(f'JSON data:', data)
+    if data['children']:
+        data['children'][0]['name'] = 'modified'
+    return json.dumps(data)
+
+
+def _calculate_computation_graph(root: str):
+    print(f'Calculate Computation Graph')
+    data = request.json
+    print(f'Project ID:', data['project'])
+    print(f'System:', data['system'])
+    path = Path(root).resolve() / 'data' / data['project'] / 'model.json'
+    model = json.loads(path.read_text(encoding='utf-8'))
+    for system in model['systems'].values():
+        return system
 
 
 ###############################################################################

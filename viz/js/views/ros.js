@@ -759,10 +759,11 @@ THE SOFTWARE.
         },
 
         initialize: function () {
+            _.bindAll(this, "sendCGRequest");
             this.visible = false;
             this.$header = this.$("#ros-system-view-header");
-            this.$calcButton = this.$("#ros-system-calc");
-            this.$infoButton = this.$("#ros-system-info");
+            this.$calcButton = this.$("#ros-system-btn-calc");
+            this.$infoButton = this.$("#ros-system-btn-info");
             this.$featureModelContainer = this.$("#feature-model-container");
 
             this.infoModal = new views.SystemInfo({ el: this.$("#ros-system-info-modal") });
@@ -782,16 +783,45 @@ THE SOFTWARE.
         },
 
         onSyncFeatureModel: function (model) {
+            const data = _.clone(model.attributes);
             if (this.svgTree == null) {
                 this.svgTree = new MyTree();
-                this.svgTree.$onInit(_.clone(model.attributes));
+                this.svgTree.$onInit(data);
+            } else {
+                this.svgTree.syncModelData(data);
             }
             // this.adjustTreeWidth();
         },
 
         calcComputationGraph: function () {
             this.$calcButton.prop("disabled", true);
-            alert("Recalculate Computation Graph");
+            const data = this.svgTree.getModelData();
+            this.featureModel.set(data);
+            this.sendCGRequest();
+            // delete data["id"];
+            // this.featureModel.set("id", null);
+            // this.featureModel.save(data, {
+            //   success: this.sendCGRequest,
+            //   error: onServerError
+            // });
+        },
+
+        sendCGRequest: function () {
+            const data = {
+              project: this.featureModel.projectId,
+              system: this.featureModel.attributes
+            };
+
+            fetch("/cg/calculate", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => console.log("Computation Graph:", data))
+            .then(() => {
+              this.$calcButton.prop("disabled", false);
+            });
         },
 
         showInfoModal: function () {
@@ -828,4 +858,11 @@ THE SOFTWARE.
             }
         }
     });
+
+
+function onServerError(model, response, options) {
+    console.error("Server request went wrong.");
+    console.log(response);
+    alert("Server request went wrong.");
+}
 })();
