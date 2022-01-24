@@ -55,6 +55,11 @@ def _uv_to_JSON(self):
 UnknownValue.to_JSON_object = _uv_to_JSON
 
 
+def _unknown_value_from_json(*args):
+    data = args[-1]
+    return UnknownValue(data['cmd'], tuple(data['args']), data['text'])
+
+
 SolverResult = namedtuple(
     'SolverResult',
     (
@@ -95,6 +100,25 @@ def _solver_result_to_JSON(self):
 
 
 SolverResult.to_JSON_object = _solver_result_to_JSON
+
+
+def _solver_result_from_json(*args):
+    data = args[-1]
+    value = data['value']
+    if isinstance(value, list):
+        for i in range(len(value)):
+            if not isinstance(value[i], str):
+                value[i] = _unknown_value_from_json(value[i])
+    var_type = data['var_type']
+    is_resolved = data['is_resolved']
+    unknown = data['unknown']
+    if unknown is not None:
+        unknown = list(map(_unknown_value_from_json, unknown))
+    return SolverResult(value, var_type, is_resolved, unknown)
+
+
+SolverResult.from_json = _solver_result_from_json
+
 
 # alias
 SolverResult.param_type = property(lambda self: self.var_type)

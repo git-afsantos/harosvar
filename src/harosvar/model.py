@@ -86,8 +86,9 @@ class ArgFeature:
     def from_json(cls, data: Dict[str, Any]):
         arg = data['arg']
         name = FeatureName(data['name'])
-        values = []  # FIXME
-        default = None  # FIXME
+        values = [SolverResult.from_json(d) for d in data['values']]
+        d = data['default']
+        default = None if d is None else SolverResult.from_json(d)
         return cls(arg, name=name, values=values, default=default)
 
 
