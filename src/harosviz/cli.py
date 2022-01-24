@@ -27,6 +27,7 @@ from pathlib import Path
 import sys
 
 from bottle import request, route, run, static_file
+from harosvar.model import ProjectModel
 from harosviz import __version__ as current_version
 
 ###############################################################################
@@ -134,7 +135,7 @@ def _update_feature_model(project_id=None):
     print(f'JSON data:', data)
     if data['children']:
         data['children'][0]['name'] = 'modified'
-    return json.dumps(data)
+    return data
 
 
 def _calculate_computation_graph(root: str):
@@ -143,9 +144,9 @@ def _calculate_computation_graph(root: str):
     print(f'Project ID:', data['project'])
     print(f'System:', data['system'])
     path = Path(root).resolve() / 'data' / data['project'] / 'model.json'
-    model = json.loads(path.read_text(encoding='utf-8'))
-    for system in model['systems'].values():
-        return system
+    json_model = json.loads(path.read_text(encoding='utf-8'))
+    model = ProjectModel.from_json(json_model)
+    return model.serialize()
 
 
 ###############################################################################

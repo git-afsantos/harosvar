@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, NewType, Optional, Set, Tuple
+from typing import Any, Dict, Final, List, NewType, Optional, Set, Tuple
 
 import attr
 from haroslaunch.data_structs import SolverResult
@@ -32,6 +32,12 @@ class Package:
     name: str
     files: List[str] = attr.Factory(list)
 
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        name = data['name']
+        files = list(data['files'])
+        return cls(name, files)
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class File:
@@ -53,6 +59,12 @@ class File:
             return parts[0]
         return '.'
 
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        package = data['package']
+        path = data['path']
+        return cls(package, path)
+
 
 ###############################################################################
 # Feature Model
@@ -70,6 +82,14 @@ class ArgFeature:
         if not self.name:
             object.__setattr__(self, 'name', FeatureName(f'arg:{self.arg}'))
 
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        arg = data['arg']
+        name = FeatureName(data['name'])
+        values = []  # FIXME
+        default = None  # FIXME
+        return cls(arg, name=name, values=values, default=default)
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class NodeFeature:
@@ -84,6 +104,13 @@ class NodeFeature:
         if not self.name:
             object.__setattr__(self, 'name', FeatureName(f'node:{self.node.name}'))
 
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        d = data['node']
+        node = RosNode(d['name'], d['package'], d['executable'])  # FIXME
+        name = FeatureName(data['name'])
+        return cls(node, name=name)
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class ParameterFeature:
@@ -97,6 +124,15 @@ class ParameterFeature:
     def __attrs_post_init__(self):
         if not self.name:
             object.__setattr__(self, 'name', FeatureName(f'param:{self.parameter.name}'))
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        d = data['parameter']
+        v = d['value']
+        v = SolverResult(str(v['value']), v['var_type'], True, [])
+        param = RosParameter(d['name'], d['param_type'], v)  # FIXME
+        name = FeatureName(data['name'])
+        return cls(param, name=name)
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -113,6 +149,28 @@ class LaunchFeatureModel:
     def __attrs_post_init__(self):
         if not self.name:
             object.__setattr__(self, 'name', FeatureName(f'roslaunch:{self.file}'))
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        file = FileId(data['file'])
+        name = FeatureName(data['name'])
+        src = data['arguments'].items()
+        arguments = {FeatureName(k): ArgFeature.from_json(v) for k, v in src}
+        src = data['nodes'].items()
+        nodes = {FeatureName(k): NodeFeature.from_json(v) for k, v in src}
+        src = data['parameters'].items()
+        params = {FeatureName(k): ParameterFeature.from_json(v) for k, v in src}
+        dependencies = set(FeatureName(d) for d in data['dependencies'])
+        conflicts = set(FeatureName(c) for c in data['conflicts'])
+        return cls(
+            file,
+            name=name,
+            arguments=arguments,
+            nodes=nodes,
+            parameters=params,
+            dependencies=dependencies,
+            conflicts=conflicts,
+        )
 
 
 ###############################################################################
@@ -141,6 +199,14 @@ class RosSystem:
     launch_files: List[EditableFeatureModel] = attr.Factory(list)
     missing_files: List[Tuple[SolverResult, LogicValue]] = attr.Factory(list)
 
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        uid = RosSystemId(data['uid'])
+        name = data['name']
+        # FIXME: launch_files
+        # FIXME: missing_files
+        return cls(uid, name)
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class RosComputationGraph:
@@ -164,8 +230,21 @@ class ProjectModel:
     # nodes: Dict[str, Executable] = attr.Factory(dict)
     # parse_trees: Dict[FileId, AST] = attr.Factory(dict)
 
-    def serialize(self):
+    def serialize(self) -> Dict[str, Any]:
         return attr.asdict(self, value_serializer=helper_serialize)
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]):
+        name = data['name']
+        src = data['packages'].items()
+        pkgs = {k: Package.from_json(v) for k, v in src}
+        src = data['files'].items()
+        files = {FileId(k): File.from_json(v) for k, v in src}
+        src = data['launch_files'].items()
+        rlfms = {FileId(k): LaunchFeatureModel.from_json(v) for k, v in src}
+        src = data['systems'].items()
+        rs = {RosSystemId(k): RosSystem.from_json(v) for k, v in src}
+        return cls(name, packages=pkgs, files=files, launch_files=rlfms, systems=rs)
 
 
 def helper_serialize(inst, field, value):
