@@ -120,13 +120,30 @@ def set_routes(root: str):
     def serve_file(filepath):
         return static_file(filepath, root=root)
 
+    def get_feature_model(project_id=None):
+        return _get_feature_model(root, project_id)
+
     def calculate_computation_graph():
         return _calculate_computation_graph(root)
 
     route('/')(lambda: serve_file('index.html'))
+    route('/data/<project_id>/feature-model.json', method='GET')(get_feature_model)
     route('/data/<project_id>/feature-model.json', method='PUT')(_update_feature_model)
     route('/cg/calculate', method='POST')(calculate_computation_graph)
     route('/<filepath:path>')(serve_file)
+
+
+###############################################################################
+# Application Logic
+###############################################################################
+
+project_model: ProjectModel = None
+
+
+def _get_feature_model(root, project_id):
+    print(f'Get: {project_id}/feature-model.json')
+    _load_project_model(root, project_id)
+    return _viz_feature_model_json(project_model)
 
 
 def _update_feature_model(project_id=None):
@@ -143,10 +160,66 @@ def _calculate_computation_graph(root: str):
     data = request.json
     print(f'Project ID:', data['project'])
     print(f'System:', data['system'])
-    path = Path(root).resolve() / 'data' / data['project'] / 'model.json'
-    json_model = json.loads(path.read_text(encoding='utf-8'))
-    model = ProjectModel.from_json(json_model)
-    return model.serialize()
+    _load_project_model(root, data['project'])
+    return {'TODO': True}
+
+
+def _viz_feature_model_json(model: ProjectModel):
+    return {
+        'id': model.name,
+        'name': model.name,
+        'value': True,
+        'userValue': True,
+        'children': [_viz_launch_feature_json(d) for d in model.launch_files.values()],
+    }
+
+
+def _viz_launch_feature_json(fm):
+    return {
+        'name': fm.file,
+        'value': None,
+        'userValue': None,
+        'children': [_viz_arg_feature_json(d) for d in fm.arguments.values()],
+    }
+
+
+def _viz_arg_feature_json(feature):
+    data = {
+        'name': feature.name,
+        'value': None,
+        'userValue': None,
+        'xor': True,
+        'children': [_viz_arg_value_json(d) for d in feature.values],
+    }
+    if feature.default is not None:
+        data['children'].append(_viz_arg_value_json(feature.default))
+    for d in data['children']:
+        if d['name'] == '$(?)' and not d['resolved']:
+            return data
+    data['children'].append({
+        'name': '$(?)',
+        'value': None,
+        'userValue': None,
+        'resolved': False,
+    })
+    return data
+
+
+def _viz_arg_value_json(value):
+    return {
+        'name': value.as_string(),
+        'value': None,
+        'userValue': None,
+        'resolved': value.is_resolved,
+    }
+
+
+def _load_project_model(root, project_id):
+    global project_model
+    if project_model is None or project_model.name != project_id:
+        path = Path(root).resolve() / 'data' / project_id / 'model.json'
+        data = json.loads(path.read_text(encoding='utf-8'))
+        project_model = ProjectModel.from_json(data)
 
 
 ###############################################################################

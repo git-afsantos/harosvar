@@ -62,18 +62,45 @@ class MyTree {
             event.stopImmediatePropagation();
             // skip the root
             if (d.depth == 0) { return; }
+            const radio = d.parent.data.xor === true;
             if (d.data.userValue !== d.data.value) {
                 d.data.userValue = d.data.value;
             } else {
-                if (d.data.value) {
-                    d.data.value = false;
-                    d.data.userValue = false;
-                } else if (d.data.value === false) {
-                    d.data.value = null;
-                    d.data.userValue = null;
+                if (radio) {
+                    if (d.data.value) {
+                        d.data.value = null;
+                        d.data.userValue = null;
+                    } else {
+                        if (d.data.resolved === false) {
+                            let v = window.prompt("Value:", "");
+                            if (v) {
+                                d.data.inputValue = v;
+                            } else {
+                                return;
+                            }
+                        }
+                        d.data.value = true;
+                        d.data.userValue = true;
+                    }
                 } else {
-                    d.data.value = true;
-                    d.data.userValue = true;
+                    if (d.data.value) {
+                      d.data.value = false;
+                      d.data.userValue = false;
+                    } else if (d.data.value === false) {
+                      d.data.value = null;
+                      d.data.userValue = null;
+                    } else {
+                      if (d.data.resolved === false) {
+                        let v = window.prompt("Value:", "");
+                        if (v) {
+                          d.data.inputValue = v;
+                        } else {
+                          return;
+                        }
+                      }
+                      d.data.value = true;
+                      d.data.userValue = true;
+                    }
                 }
             }
             this.propagateSelection(d);
@@ -82,6 +109,15 @@ class MyTree {
 
         this.propagateSelection = (source) => {
             var n = source.parent;
+            // radio button behaviour
+            if (n.data.xor) {
+                let v = source.data.value ? false : null;
+                for (const o of n.data.children) {
+                    if (o === source.data) { continue; }
+                    o.value = v;
+                    o.userValue = v;
+                }
+            }
             // skip the root
             while (n != null && n.depth > 0) {
                 this.recalculateValue(n);
@@ -197,8 +233,8 @@ class MyTree {
                 .attr("dy", ".35em")
                 .attr("text-anchor", "start")
                 .text(function (d) {
-                    if (d.data.name.length > 20) {
-                        return d.data.name.substring(0, 20) + "...";
+                    if (d.data.name.length > 30) {
+                        return "..." + d.data.name.substring(d.data.name.length - 30);
                     }
                     else {
                         return d.data.name;
