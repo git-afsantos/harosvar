@@ -59,6 +59,56 @@ def build_project(name: str, ws: fsys.Workspace) -> ProjectModel:
     return model
 
 
+def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputationGraph:
+    # FIXME: selection is the JSON structure from viz for now
+    cg = RosComputationGraph(RosSystemId('null'))
+    tier1 = selection['children']  # launch files
+    for t1_item in tier1:
+        t1_value = t1_item['value']
+        if t1_value is False or t1_value is None:
+            continue
+        lffm = model.launch_files[FileId(t1_item['name'])]
+        args = {}
+        tier2 = t1_item['children']  # arguments
+        for t2_item in tier2:
+            t2_value = t2_item['value']
+            if t2_value is False or t2_value is None:
+                continue
+            feature = lffm.arguments[FeatureName(t2_item['name'])]
+            value = None
+            tier3 = t2_item['children']  # values
+            for i in range(len(tier3)):
+                t3_item = tier3[i]
+                t3_value = t3_item['value']
+                if t3_value is False:
+                    continue
+                if value is not None:
+                    continue  # FIXME error
+                if t3_value is True:
+                    if i == 0:
+                        value = feature.default
+                    else:
+                        value = feature.values[i - 1]
+            args[feature.arg] = value
+        for feature in lffm.nodes.values():
+            node = feature.node
+            if node.condition.is_true:
+                cg.nodes.append(node)
+            elif node.condition.is_false:
+                continue
+            else:
+                continue  # FIXME resolve variables
+        for feature in lffm.parameters.values():
+            param = feature.parameter
+            if param.condition.is_true:
+                cg.parameters.append(param)
+            elif param.condition.is_false:
+                continue
+            else:
+                continue  # FIXME resolve variables
+    return cg
+
+
 def build_computation_graph(
     model: ProjectModel,
     ws: fsys.Workspace,
