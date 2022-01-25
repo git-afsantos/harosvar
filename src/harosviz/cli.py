@@ -168,8 +168,8 @@ def _viz_feature_model_json(model: ProjectModel):
     return {
         'id': model.name,
         'name': model.name,
-        'value': True,
-        'userValue': True,
+        'selected': True,
+        'type': 'project',
         'children': [_viz_launch_feature_json(d) for d in model.launch_files.values()],
     }
 
@@ -177,8 +177,8 @@ def _viz_feature_model_json(model: ProjectModel):
 def _viz_launch_feature_json(fm):
     return {
         'name': fm.file,
-        'value': None,
-        'userValue': None,
+        'selected': None,
+        'type': 'roslaunch',
         'children': [_viz_arg_feature_json(d) for d in fm.arguments.values()],
     }
 
@@ -186,8 +186,8 @@ def _viz_launch_feature_json(fm):
 def _viz_arg_feature_json(feature):
     data = {
         'name': feature.name,
-        'value': None,
-        'userValue': None,
+        'selected': None,
+        'type': 'arg',
         'xor': True,
         'children': [_viz_arg_value_json(d) for d in feature.values],
     }
@@ -198,8 +198,8 @@ def _viz_arg_feature_json(feature):
             return data
     data['children'].append({
         'name': '$(?)',
-        'value': None,
-        'userValue': None,
+        'selected': None,
+        'type': 'value',
         'resolved': False,
     })
     return data
@@ -208,8 +208,8 @@ def _viz_arg_feature_json(feature):
 def _viz_arg_value_json(value):
     return {
         'name': value.as_string(),
-        'value': None,
-        'userValue': None,
+        'selected': None,
+        'type': 'value',
         'resolved': value.is_resolved,
     }
 

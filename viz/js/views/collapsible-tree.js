@@ -43,7 +43,12 @@ class MyTree {
             }
         };
 
-        this.click = (event, d) => {
+        this.onBulletClick = (event, d) => {
+            if (!d.children && !d._children) {
+                return this.onFeatureLabelClick(event, d)
+            }
+            event.preventDefault();
+            event.stopImmediatePropagation();
             if (d.children) {
                 d._children = d.children;
                 d.children = null;
@@ -62,44 +67,44 @@ class MyTree {
             event.stopImmediatePropagation();
             // skip the root
             if (d.depth == 0) { return; }
-            const radio = d.parent.data.xor === true;
-            if (d.data.userValue !== d.data.value) {
-                d.data.userValue = d.data.value;
+            const radio = d.parent.ui.xor === true;
+            if (d.ui.selected !== d.data.selected) {
+                d.ui.selected = d.data.selected;
             } else {
                 if (radio) {
-                    if (d.data.value) {
-                        d.data.value = null;
-                        d.data.userValue = null;
+                    if (d.data.selected) {
+                        d.data.selected = null;
+                        d.ui.selected = null;
                     } else {
                         if (d.data.resolved === false) {
                             let v = window.prompt("Value:", "");
                             if (v) {
-                                d.data.inputValue = v;
+                                d.ui.inputValue = v;
                             } else {
                                 return;
                             }
                         }
-                        d.data.value = true;
-                        d.data.userValue = true;
+                        d.data.selected = true;
+                        d.ui.selected = true;
                     }
                 } else {
-                    if (d.data.value) {
-                      d.data.value = false;
-                      d.data.userValue = false;
-                    } else if (d.data.value === false) {
-                      d.data.value = null;
-                      d.data.userValue = null;
+                    if (d.data.selected) {
+                      d.data.selected = false;
+                      d.ui.selected = false;
+                    } else if (d.data.selected === false) {
+                      d.data.selected = null;
+                      d.ui.selected = null;
                     } else {
                       if (d.data.resolved === false) {
                         let v = window.prompt("Value:", "");
                         if (v) {
-                          d.data.inputValue = v;
+                          d.ui.inputValue = v;
                         } else {
                           return;
                         }
                       }
-                      d.data.value = true;
-                      d.data.userValue = true;
+                      d.data.selected = true;
+                      d.ui.selected = true;
                     }
                 }
             }
@@ -110,12 +115,13 @@ class MyTree {
         this.propagateSelection = (source) => {
             var n = source.parent;
             // radio button behaviour
-            if (n.data.xor) {
-                let v = source.data.value ? false : null;
-                for (const o of n.data.children) {
-                    if (o === source.data) { continue; }
-                    o.value = v;
-                    o.userValue = v;
+            if (n.ui.xor) {
+                let v = source.data.selected ? false : null;
+                let children = n.children || n._children;
+                for (const o of children) {
+                    if (o === source) { continue; }
+                    o.data.selected = v;
+                    o.ui.selected = v;
                 }
             }
             // skip the root
@@ -123,20 +129,20 @@ class MyTree {
                 this.recalculateValue(n);
                 n = n.parent;
             }
-            let value = source.data.value;
+            let value = source.data.selected;
             if (value || !source.data.children) { return; }
             var fv;
             if (value == null) {
-                fv = (d) => { return d.userValue; };
+                fv = (d) => { return d.ui.selected; };
             } else {
                 fv = () => { return value; }
             }
-            let stack = [...source.data.children];
+            let stack = [...(source.children || source._children)];
             while (stack.length > 0) {
                 let datum = stack.pop();
-                datum.value = fv(datum);
-                if (datum.children) {
-                    for (var child of datum.children) {
+                datum.data.selected = fv(datum);
+                if (datum.data.children) {
+                    for (var child of (datum.children || datum._children)) {
                         stack.push(child);
                     }
                 }
@@ -145,17 +151,17 @@ class MyTree {
 
         this.recalculateValue = (d) => {
             if (d.parent != null) {
-                if (d.parent.data.value === false) {
-                    d.data.value = false;
+                if (d.parent.data.selected === false) {
+                    d.data.selected = false;
                     return;
                 }
             }
             if (!d.children) { return; }
             var value = null;
             for (var child of d.children) {
-                if (child.data.value) { value = true; }
+                if (child.data.selected) { value = true; }
             }
-            d.data.value = value || d.data.userValue;
+            d.data.selected = value || d.ui.selected;
         };
 
         this.render = (nodes) => {
@@ -164,18 +170,18 @@ class MyTree {
                 let selected = false;
                 let discarded = false;
                 let icon = ICON_MAYBE;
-                let automatic = d.data.value !== d.data.userValue;
+                let automatic = d.data.selected !== d.ui.selected;
                 if (d.depth == 0) { return; }
-                if (d.data.value) {
+                if (d.data.selected) {
                     icon = ICON_TRUE;
                     selected = true;
-                } else if (d.data.value === false) {
+                } else if (d.data.selected === false) {
                     icon = ICON_FALSE;
                     discarded = true;
-                } else if (d.data.userValue) {
+                } else if (d.ui.selected) {
                     icon = ICON_TRUE;
                     selected = true;
-                } else if (d.data.userValue === false) {
+                } else if (d.ui.selected === false) {
                     icon = ICON_FALSE;
                     discarded = true;
                 }
@@ -194,8 +200,6 @@ class MyTree {
             let nodesSort = [];
             nodes.eachBefore(function (n) {
                 nodesSort.push(n);
-                if (n.data.value === undefined) { n.data.value = null; }
-                if (n.data.userValue === undefined) { n.data.userValue = null; }
             });
             // this.height = Math.max(500, nodesSort.length * this.barHeight + this.margin.top + this.margin.bottom);
             this.height = Math.max(300, nodesSort.length * this.barHeight + this.margin.top + this.margin.bottom);
@@ -219,12 +223,12 @@ class MyTree {
                 });
 
             // Enter any new nodes at the parent's previous position.
-            var nodeEnter = node.enter().append("g")
+            let nodeEnter = node.enter().append("g")
                 .classed("tree-node", true)
                 .attr("transform", function () {
                     return "translate(" + source.y0 + "," + source.x0 + ")";
                 })
-                .on("click", this.click);
+                .on("click", this.onBulletClick);
             nodeEnter.append("circle")
                 .attr("r", 1e-6);
             let tlabel = nodeEnter.append("text")
@@ -244,7 +248,7 @@ class MyTree {
                 .on("click", this.onFeatureLabelClick);
             tlabel.append("tspan")
                 .attr("dx", ".5em")
-                .text(function (d) { return selectionIcon(d.data.value); })
+                .text(function (d) { return selectionIcon(d.data.selected); })
             nodeEnter.append("svg:title").text(function (d) {
                 return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
             });
@@ -342,6 +346,11 @@ class MyTree {
             d.name = d.id; //transferring name to a name variable
             d.id = this.i; //Assigning numerical Ids
             this.i++;
+            d.ui = {
+                name: d.data.name,
+                value: d.data.selected,
+                xor: d.data.type === 'arg'
+            };
         });
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
