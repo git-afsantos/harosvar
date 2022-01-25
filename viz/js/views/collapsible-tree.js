@@ -80,6 +80,7 @@ class MyTree {
                             let v = window.prompt("Value:", "");
                             if (v) {
                                 d.ui.inputValue = v;
+                                d.ui.name = v;
                             } else {
                                 return;
                             }
@@ -185,11 +186,16 @@ class MyTree {
                     icon = ICON_FALSE;
                     discarded = true;
                 }
-                d3.select(this)
+                let label = d3.select(this)
                     .select("text.feature-label")
                     .classed("selected", selected)
-                    .classed("discarded", discarded)
-                    .select("tspan")
+                    .classed("discarded", discarded);
+                if (d.ui.name != d.data.name) {
+                  console.log(d.ui.name, d.data.name);
+                }
+                label.select("tspan.feature-name")
+                    .text(d.ui.name);
+                label.select("tspan.text-icon")
                     .text(automatic ? `(${icon})` : icon);
             });
         };
@@ -236,6 +242,10 @@ class MyTree {
                 .attr("x", NODE_SIZE / 2)
                 .attr("dy", ".35em")
                 .attr("text-anchor", "start")
+                .style("fill-opacity", 1e-6)
+                .on("click", this.onFeatureLabelClick);
+            tlabel.append("tspan")
+                .classed("feature-name", true)
                 .text(function (d) {
                     if (d.data.name.length > 30) {
                         return "..." + d.data.name.substring(d.data.name.length - 30);
@@ -243,12 +253,11 @@ class MyTree {
                     else {
                         return d.data.name;
                     }
-                })
-                .style("fill-opacity", 1e-6)
-                .on("click", this.onFeatureLabelClick);
+                });
             tlabel.append("tspan")
+                .classed("text-icon", true)
                 .attr("dx", ".5em")
-                .text(function (d) { return selectionIcon(d.data.selected); })
+                .text(function (d) { return selectionIcon(d.data.selected); });
             nodeEnter.append("svg:title").text(function (d) {
                 return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
             });
@@ -348,7 +357,7 @@ class MyTree {
             this.i++;
             d.ui = {
                 name: d.data.name,
-                value: d.data.selected,
+                selected: d.data.selected,
                 xor: d.data.type === 'arg'
             };
         });
