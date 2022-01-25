@@ -16,6 +16,10 @@ const ICON_TRUE = "\u2713";
 const ICON_FALSE = "\u2716"; // "\u00d7";
 const ICON_MAYBE = "";
 
+const ROSLAUNCH_TYPE = "roslaunch";
+const ARG_TYPE = "arg";
+const VALUE_TYPE = "value";
+
 function selectionIcon(value, automatic) {
   if (value) { return automatic ? `(${ICON_TRUE})` : ICON_TRUE; }
   if (value === false) { return automatic ? `(${ICON_FALSE})` : ICON_FALSE; }
@@ -67,102 +71,153 @@ class MyTree {
             event.stopImmediatePropagation();
             // skip the root
             if (d.depth == 0) { return; }
-            const radio = d.parent.ui.xor === true;
-            if (d.ui.selected !== d.data.selected) {
-                d.ui.selected = d.data.selected;
-            } else {
-                if (radio) {
-                    if (d.data.selected) {
-                        d.data.selected = null;
-                        d.ui.selected = null;
-                    } else {
-                        if (d.data.resolved === false) {
-                            let v = window.prompt("Value:", "");
-                            if (v) {
-                                d.ui.inputValue = v;
-                                d.ui.name = v;
-                            } else {
-                                return;
-                            }
-                        }
-                        d.data.selected = true;
-                        d.ui.selected = true;
-                    }
-                } else {
-                    if (d.data.selected) {
-                      d.data.selected = false;
-                      d.ui.selected = false;
-                    } else if (d.data.selected === false) {
-                      d.data.selected = null;
-                      d.ui.selected = null;
-                    } else {
-                      if (d.data.resolved === false) {
-                        let v = window.prompt("Value:", "");
-                        if (v) {
-                          d.ui.inputValue = v;
-                        } else {
-                          return;
-                        }
-                      }
-                      d.data.selected = true;
-                      d.ui.selected = true;
-                    }
-                }
-            }
-            this.propagateSelection(d);
-            this.render();
-        };
-
-        this.propagateSelection = (source) => {
-            var n = source.parent;
-            // radio button behaviour
-            if (n.ui.xor) {
-                let v = source.data.selected ? false : null;
-                let children = n.children || n._children;
-                for (const o of children) {
-                    if (o === source) { continue; }
-                    o.data.selected = v;
-                    o.ui.selected = v;
-                }
-            }
-            // skip the root
-            while (n != null && n.depth > 0) {
-                this.recalculateValue(n);
-                n = n.parent;
-            }
-            let value = source.data.selected;
-            if (value || !source.data.children) { return; }
-            var fv;
-            if (value == null) {
-                fv = (d) => { return d.ui.selected; };
-            } else {
-                fv = () => { return value; }
-            }
-            let stack = [...(source.children || source._children)];
-            while (stack.length > 0) {
-                let datum = stack.pop();
-                datum.data.selected = fv(datum);
-                if (datum.data.children) {
-                    for (var child of (datum.children || datum._children)) {
-                        stack.push(child);
-                    }
-                }
-            }
-        };
-
-        this.recalculateValue = (d) => {
-            if (d.parent != null) {
-                if (d.parent.data.selected === false) {
-                    d.data.selected = false;
+            switch (d.data.type) {
+                case ROSLAUNCH_TYPE:
+                    return this.onSelectRosLaunch(d);
+                case ARG_TYPE:
+                    return this.onSelectArg(d);
+                case VALUE_TYPE:
+                    return this.onSelectValue(d);
+                default:
                     return;
-                }
             }
-            if (!d.children) { return; }
-            var value = null;
-            for (var child of d.children) {
-                if (child.data.selected) { value = true; }
+        };
+
+        this.onSelectRosLaunch = (d) => {
+          console.assert(d.data.type === ROSLAUNCH_TYPE);
+          if (d.ui.selected !== d.data.selected) {
+            d.ui.selected = d.data.selected;
+          } else {
+            if (d.data.selected) {
+              d.data.selected = false;
+              d.ui.selected = false;
+            } else if (d.data.selected === false) {
+              d.data.selected = null;
+              d.ui.selected = null;
+            } else {
+              d.data.selected = true;
+              d.ui.selected = true;
             }
-            d.data.selected = value || d.ui.selected;
+          }
+          this.propagateRosLaunchSelection(d);
+          this.render();
+        };
+
+        this.onSelectArg = (d) => {
+          console.assert(d.data.type === ARG_TYPE);
+          if (d.ui.selected !== d.data.selected) {
+            d.ui.selected = d.data.selected;
+            if (d.data.selected) {
+              this.propagateArgSelectionDown(d);
+            }
+          } else {
+            if (d.data.selected === false) {
+              console.assert(d.parent.data.selected === false);
+              return;
+            }
+            if (d.data.selected) {
+              console.assert(d.parent.data.selected);
+              d.data.selected = null;
+              d.ui.selected = null;
+            } else {
+              console.assert(d.parent.data.selected !== false);
+              d.data.selected = true;
+              d.ui.selected = true;
+              this.propagateArgSelectionUp(d);
+            }
+            this.propagateArgSelectionDown(d);
+          }
+          this.render();
+        };
+
+        this.onSelectValue = (d) => {
+          console.assert(d.data.type === VALUE_TYPE);
+          if (d.ui.selected !== d.data.selected) {
+            d.ui.selected = d.data.selected;
+          } else {
+            if (d.data.selected) {
+              console.assert(d.parent.data.selected);
+            }
+            this.setValueSelected(d);
+          }
+          this.propagateValueSelection(d);
+          this.render();
+        };
+
+        this.propagateRosLaunchSelection = (source) => {
+          console.assert(source.data.type === ROSLAUNCH_TYPE);
+          const children = source.children || source._children;
+          if (!children) { return; }
+          const v = source.data.selected;
+          for (const d of children) {
+            d.data.selected = v;
+            this.propagateArgSelectionDown(d);
+          }
+        };
+
+        this.propagateArgSelectionDown = (source) => {
+          console.assert(source.data.type === ARG_TYPE);
+          const children = source.children || source._children;
+          console.assert(children != null);
+          console.assert(children.length > 0);
+          const v = source.data.selected;
+          if (v) {
+            let previous = null;
+            for (const d of children) {
+              if (d.ui.selected) { previous = d; }
+              d.data.selected = false;
+            }
+            previous = previous || children[0];
+            this.setValueSelected(previous);
+          } else {
+            for (const d of children) {
+              d.data.selected = v;
+              d.ui.selected = v;
+            }
+          }
+        };
+
+        this.propagateArgSelectionUp = (source) => {
+          console.assert(source.data.type === ARG_TYPE);
+          const parent = source.parent;
+          if (source.data.selected) {
+            parent.data.selected = true;
+            this.propagateRosLaunchSelection(parent);
+          } else {
+            console.assert(source.data.selected == null);
+            if (parent.ui.selected == null) {
+              const siblings = parent.children || parent._children;
+              for (d of siblings) {
+                if (d.data.selected) { return; }
+              }
+              parent.data.selected = null;
+            }
+          }
+        };
+
+        this.propagateValueSelection = (source) => {
+          console.assert(source.data.type === VALUE_TYPE);
+          console.assert(source.data.selected === true);
+          const parent = source.parent;
+          parent.data.selected = true;
+          const siblings = parent.children || parent._children;
+          for (const d of siblings) {
+            if (d === source) { continue; }
+            d.data.selected = false;
+            d.ui.selected = false;
+          }
+        };
+
+        this.setValueSelected = (d) => {
+          if (d.data.resolved === false) {
+            const v = window.prompt(`Value for [${d.parent.ui.name}]:`, "");
+            if (!v) { return; }
+            d.ui.inputValue = v;
+            d.ui.name = v + " (*)";
+          }
+          d.data.selected = true;
+          d.ui.selected = true;
+          d.parent.ui.selected = true;
         };
 
         this.render = (nodes) => {
@@ -190,9 +245,6 @@ class MyTree {
                     .select("text.feature-label")
                     .classed("selected", selected)
                     .classed("discarded", discarded);
-                if (d.ui.name != d.data.name) {
-                  console.log(d.ui.name, d.data.name);
-                }
                 label.select("tspan.feature-name")
                     .text(d.ui.name);
                 label.select("tspan.text-icon")
