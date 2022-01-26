@@ -202,16 +202,14 @@ class MyTree {
             }
             // check (by index) if there was a previously selected value
             // otherwise, just select the first value
-            let i = 0;
+            let i = source.data.defaultValue || 0;
             const previous = source.ui.previousValue;
             if (previous != null) {
-              let j = children.length - 1;
-              while (j >= 0) {
+              for (let j = 0; j < children.length; ++j) {
                 if (children[j].id === previous) {
                   i = j;
                   break;
                 }
-                --j;
               }
             }
             const ok = this.setValueSelected(children[i], false);
