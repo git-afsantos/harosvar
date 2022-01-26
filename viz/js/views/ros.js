@@ -807,15 +807,10 @@ THE SOFTWARE.
         },
 
         sendCGRequest: function () {
-            const data = {
-              project: this.featureModel.projectId,
-              system: this.featureModel.attributes
-            };
-
             fetch("/cg/calculate", {
               method: "POST",
               headers: {"Content-Type": "application/json"},
-              body: JSON.stringify(data)
+              body: JSON.stringify(this.featureModel.attributes)
             })
             .then(response => response.json())
             .then(data => console.log("Computation Graph:", data))
