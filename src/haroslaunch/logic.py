@@ -76,6 +76,23 @@ class LogicValue(object):
         # iterator
         return None
 
+    @classmethod
+    def from_json(cls, data):
+        if data is True:
+            return LogicValue.T
+        if data is False:
+            return LogicValue.F
+        if isinstance(data, dict):
+            return LogicVariable(data['text'], data['data'], name=data['name'])
+        if isinstance(data, list):
+            if data[0] == 'not':
+                return LogicNot(LogicValue.from_json(data[1]))
+            args = list(map(LogicValue.from_json, data[1:]))
+            if data[0] == 'and':
+                return LogicAnd(args)
+            if data[0] == 'or':
+                return LogicOr(args)
+
 
 class LogicTrue(LogicValue):
     __slots__ = ()

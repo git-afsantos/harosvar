@@ -247,6 +247,7 @@ class MyTree {
               const v = window.prompt(`Value for [${d.parent.ui.name}]:`, "true");
               if (!v) { return false; }
               d.ui.value = v;
+              d.data.value = v;
               d.ui.name = v + " (*)";
               d.ui.selected = true;
             } else {

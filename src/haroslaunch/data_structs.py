@@ -40,6 +40,19 @@ SourceLocation = namedtuple(
 SourceLocation.to_JSON_object = SourceLocation._asdict
 
 
+def _loc_from_json(*args):
+    data = args[-1]
+    return SourceLocation(
+        data['package'],
+        data['filepath'],
+        data['line'],
+        data['column'],
+    )
+
+
+SourceLocation.from_json = _loc_from_json
+
+
 ###############################################################################
 # Unknown Values and Variables
 ###############################################################################

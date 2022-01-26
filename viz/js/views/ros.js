@@ -810,7 +810,7 @@ THE SOFTWARE.
             fetch("/cg/calculate", {
               method: "POST",
               headers: {"Content-Type": "application/json"},
-              body: JSON.stringify(this.featureModel.attributes)
+              body: JSON.stringify(this.cgRequestData())
             })
             .then(response => response.json())
             .then(data => console.log("Computation Graph:", data))
@@ -842,6 +842,48 @@ THE SOFTWARE.
             h -= this.$header.outerHeight();
             this.$featureModelContainer.height(h);
             // this.adjustTreeWidth();
+        },
+
+        cgRequestData: function () {
+          const fm = this.featureModel.attributes;
+          const data = {
+            project: fm.id,
+            launch: [],
+            discard: []
+          };
+          // iterate over launch files
+          for (const d1 of fm.children) {
+            if (d1.selected == null) { continue; }
+            if (d1.selected) {
+              const args = {};
+              const launch = {
+                name: d1.name,
+                args: args
+              };
+              data.launch.push(launch);
+              // iterate over args
+              for (const d2 of d1.children) {
+                let value = null;
+                if (d2.selected) {
+                  // iterate over values
+                  for (const d3 of d2.children) {
+                    if (d3.selected) {
+                      value = d3.resolved ? d3.name : d3.value;
+                      console.assert(value != null);
+                      break;
+                    }
+                    console.assert(d3.selected === false);
+                  }
+                } else {
+                  console.assert(d2.selected == null);
+                }
+                args[d2.name] = value;
+              }
+            } else {
+              data.discard.push(d1.name);
+            }
+          }
+          return data;
         },
 
         // unreferenced

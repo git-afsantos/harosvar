@@ -14,8 +14,16 @@ try:
 except ImportError:
     import re
 
-from .data_structs import ResolvedBool, ResolvedDouble, ResolvedInt, ResolvedString, VariantDict
-from .logic import LOGIC_TRUE
+from .data_structs import (
+    ResolvedBool,
+    ResolvedDouble,
+    ResolvedInt,
+    ResolvedString,
+    SolverResult,
+    SourceLocation,
+    VariantDict,
+)
+from .logic import LOGIC_TRUE, LogicValue
 
 ###############################################################################
 # Helper Functions
@@ -33,6 +41,12 @@ def _json_obj(item):
         if isinstance(item, (list, tuple)):
             return [_json_obj(v) for v in item]
         return item
+
+
+def _sr_from_json(data):
+    if data is None:
+        return None
+    return SolverResult.from_json(data)
 
 
 ###############################################################################
@@ -338,6 +352,27 @@ class RosNode(RosResource):
             'environment': _json_obj(self.environment),
         }
 
+    @classmethod
+    def from_json(cls, data):
+        return cls(
+            data['name'],
+            data['package'],
+            data['executable'],
+            system=data['system'],
+            args=_sr_from_json(data['args']),
+            machine=_sr_from_json(data['machine']),
+            required=_sr_from_json(data['is_required']),
+            respawn=_sr_from_json(data['respawns']),
+            delay=_sr_from_json(data['respawn_delay']),
+            output=_sr_from_json(data['output']),
+            cwd=_sr_from_json(data['working_dir']),
+            prefix=_sr_from_json(data['launch_prefix']),
+            remaps=VariantDict(data['remaps']),
+            env=VariantDict(data['environment']),
+            condition=LogicValue.from_json(data['condition']),
+            location=SourceLocation.from_json(data['traceability']),
+        )
+
 
 class RosTest(RosResource):
     __slots__ = RosResource.__slots__ + (
@@ -431,3 +466,14 @@ class RosParameter(RosResource):
             'param_type': self.param_type,
             'value': self.value.to_JSON_object(),
         }
+
+    @classmethod
+    def from_json(cls, data):
+        return cls(
+            data['name'],
+            data['param_type'],
+            _sr_from_json(data['value']),
+            system=data['system'],
+            condition=LogicValue.from_json(data['condition']),
+            location=SourceLocation.from_json(data['traceability']),
+        )

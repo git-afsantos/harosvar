@@ -62,34 +62,15 @@ def build_project(name: str, ws: fsys.Workspace) -> ProjectModel:
 def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputationGraph:
     # FIXME: selection is the JSON structure from viz for now
     cg = RosComputationGraph(RosSystemId('null'))
-    tier1 = selection['children']  # launch files
-    for t1_item in tier1:
-        t1_value = t1_item['value']
-        if t1_value is False or t1_value is None:
-            continue
-        lffm = model.launch_files[FileId(t1_item['name'])]
+    for launch_data in selection['launch']:
+        lffm = model.launch_files[FileId(launch_data['name'])]
         args = {}
-        tier2 = t1_item['children']  # arguments
-        for t2_item in tier2:
-            t2_value = t2_item['value']
-            if t2_value is False or t2_value is None:
-                continue
-            feature = lffm.arguments[FeatureName(t2_item['name'])]
-            value = None
-            tier3 = t2_item['children']  # values
-            for i in range(len(tier3)):
-                t3_item = tier3[i]
-                t3_value = t3_item['value']
-                if t3_value is False:
-                    continue
-                if value is not None:
-                    continue  # FIXME error
-                if t3_value is True:
-                    if i == 0:
-                        value = feature.default
-                    else:
-                        value = feature.values[i - 1]
-            args[feature.arg] = value
+        for name, value in launch_data['args'].items():
+            feature = lffm.arguments[FeatureName(name)]
+            if value is None and feature.default is not None and feature.default.is_resolved:
+                args[feature.arg] = feature.default.value
+            else:
+                args[feature.arg] = value
         for feature in lffm.nodes.values():
             node = feature.node
             if node.condition.is_true:
@@ -106,6 +87,7 @@ def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputat
                 continue
             else:
                 continue  # FIXME resolve variables
+    # FIXME handle conditional launch files
     return cg
 
 

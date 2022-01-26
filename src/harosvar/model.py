@@ -107,8 +107,7 @@ class NodeFeature:
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]):
-        d = data['node']
-        node = RosNode(d['name'], d['package'], d['executable'])  # FIXME
+        node = RosNode.from_json(data['node'])
         name = FeatureName(data['name'])
         return cls(node, name=name)
 
@@ -128,10 +127,7 @@ class ParameterFeature:
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]):
-        d = data['parameter']
-        v = d['value']
-        v = SolverResult(str(v['value']), v['var_type'], True, [])
-        param = RosParameter(d['name'], d['param_type'], v)  # FIXME
+        param = RosParameter.from_json(data['parameter'])
         name = FeatureName(data['name'])
         return cls(param, name=name)
 
@@ -214,6 +210,9 @@ class RosComputationGraph:
     system: RosSystemId
     nodes: List[RosNode] = attr.Factory(list)
     parameters: List[RosParameter] = attr.Factory(list)
+
+    def serialize(self) -> Dict[str, Any]:
+        return attr.asdict(self, value_serializer=helper_serialize)
 
 
 ###############################################################################

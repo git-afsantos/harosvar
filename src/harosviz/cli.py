@@ -28,6 +28,7 @@ import sys
 
 from bottle import request, route, run, static_file
 from harosvar.model import ProjectModel
+from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
 
 ###############################################################################
@@ -156,12 +157,12 @@ def _update_feature_model(project_id=None):
 
 
 def _calculate_computation_graph(root: str):
-    print(f'Calculate Computation Graph')
     data = request.json
-    print(f'Project ID:', data['project'])
-    print(f'System:', data['system'])
-    _load_project_model(root, data['project'])
-    return {'TODO': True}
+    project_id = data['project']
+    print(f'Calculate Computation Graph for project "{project_id}"')
+    _load_project_model(root, project_id)
+    cg = build_computation_graph_adhoc(project_model, data)
+    return cg.serialize()
 
 
 def _viz_feature_model_json(model: ProjectModel):
