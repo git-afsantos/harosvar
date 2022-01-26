@@ -59,6 +59,13 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
         help='Output directory for ROS models. Outputs to screen if not supplied.',
     )
 
+    parser.add_argument(
+        '-n',
+        '--name',
+        default='project',
+        help='Desired name for the project.',
+    )
+
     args = parser.parse_args(args=argv)
     return vars(args)
 
@@ -112,7 +119,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 
     ws = fsys.Workspace(list(args['paths']))
     ws.find_packages()
-    model = build_project('ROS Project', ws)
+    model = build_project(args['name'], ws)
 
     for package in model.packages.values():
         print(f'\nPackage {package.name}:')
