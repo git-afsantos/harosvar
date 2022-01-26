@@ -184,19 +184,24 @@ def _viz_launch_feature_json(fm):
 
 
 def _viz_arg_feature_json(feature):
+    children = []
+    default = None
+    if feature.default is not None:
+        if feature.default.is_resolved:
+            default = 0
+        children.append(_viz_arg_value_json(feature.default))
+    children.extend(_viz_arg_value_json(d) for d in feature.values)
     data = {
         'name': feature.name,
         'selected': None,
         'type': 'arg',
-        'xor': True,
-        'children': [_viz_arg_value_json(d) for d in feature.values],
+        'default': default,
+        'children': children,
     }
-    if feature.default is not None:
-        data['children'].append(_viz_arg_value_json(feature.default))
-    for d in data['children']:
+    for d in children:
         if d['name'] == '$(?)' and not d['resolved']:
             return data
-    data['children'].append({
+    children.append({
         'name': '$(?)',
         'selected': None,
         'type': 'value',

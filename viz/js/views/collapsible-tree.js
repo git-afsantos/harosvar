@@ -98,8 +98,8 @@ class MyTree {
               d.data.selected = true;
               d.ui.selected = true;
             }
+            this.propagateRosLaunchSelection(d);
           }
-          this.propagateRosLaunchSelection(d);
           this.render();
         };
 
@@ -108,7 +108,7 @@ class MyTree {
           if (d.ui.selected !== d.data.selected) {
             d.ui.selected = d.data.selected;
             if (d.data.selected) {
-              this.propagateArgSelectionDown(d);
+              this.propagateArgSelection(d);
             }
           } else {
             if (d.data.selected === false) {
@@ -121,11 +121,15 @@ class MyTree {
               d.ui.selected = null;
             } else {
               console.assert(d.parent.data.selected !== false);
+              // propagate up to the parent
+              d.parent.data.selected = true;
+              // propagate down to the siblings
+              this.propagateRosLaunchSelection(d);
+              // change this selection
               d.data.selected = true;
               d.ui.selected = true;
-              this.propagateArgSelectionUp(d);
             }
-            this.propagateArgSelectionDown(d);
+            this.propagateArgSelection(d);
           }
           this.render();
         };
@@ -138,7 +142,7 @@ class MyTree {
             if (d.data.selected) {
               console.assert(d.parent.data.selected);
             }
-            this.setValueSelected(d);
+            this.setValueSelected(d, true);
           }
           this.propagateValueSelection(d);
           this.render();
@@ -148,58 +152,78 @@ class MyTree {
           console.assert(source.data.type === ROSLAUNCH_TYPE);
           const children = source.children || source._children;
           if (!children) { return; }
-          const v = source.data.selected;
-          for (const d of children) {
-            d.data.selected = v;
-            this.propagateArgSelectionDown(d);
+          if (source.data.selected) {
+            for (const d of children) {
+              // skip those that are already selected
+              if (d.data.selected) { continue; }
+              // propagate `null` to deselect all values
+              d.ui.selected = null;
+              d.data.selected = null;
+              const ok = this.propagateArgSelection(d);
+              // propagating `null` always works
+              console.assert(ok);
+            }
+          } else {
+            const v = source.data.selected;
+            for (const d of children) {
+              // propagate `null` to deselect all values
+              d.ui.selected = null;
+              d.data.selected = null;
+              const ok = this.propagateArgSelection(d);
+              // propagating `null` always works
+              console.assert(ok);
+              d.ui.selected = v;
+              d.data.selected = v;
+            }
           }
         };
 
-        this.propagateArgSelectionDown = (source) => {
+        this.propagateArgSelection = (source) => {
           console.assert(source.data.type === ARG_TYPE);
           const children = source.children || source._children;
           console.assert(children != null);
           console.assert(children.length > 0);
           const v = source.data.selected;
           if (v) {
-            let previous = null;
+            // if selecting the arg, set all values to false
             for (const d of children) {
-              if (d.ui.selected) { previous = d; }
+              d.ui.selected = false;
               d.data.selected = false;
             }
-            previous = previous || children[0];
-            this.setValueSelected(previous);
+            // check (by index) if there was a previously selected value
+            // otherwise, just select the first value
+            let i = 0;
+            const previous = source.ui.previousValue;
+            if (previous != null) {
+              let j = children.length - 1;
+              while (j >= 0) {
+                if (children[j].id === previous) {
+                  i = j;
+                  break;
+                }
+                --j;
+              }
+            }
+            const ok = this.setValueSelected(children[i], false);
+            if (ok) { source.ui.previousValue = i; }
+            return ok;
           } else {
             for (const d of children) {
               d.data.selected = v;
               d.ui.selected = v;
             }
           }
-        };
-
-        this.propagateArgSelectionUp = (source) => {
-          console.assert(source.data.type === ARG_TYPE);
-          const parent = source.parent;
-          if (source.data.selected) {
-            parent.data.selected = true;
-            this.propagateRosLaunchSelection(parent);
-          } else {
-            console.assert(source.data.selected == null);
-            if (parent.ui.selected == null) {
-              const siblings = parent.children || parent._children;
-              for (d of siblings) {
-                if (d.data.selected) { return; }
-              }
-              parent.data.selected = null;
-            }
-          }
+          return true;
         };
 
         this.propagateValueSelection = (source) => {
           console.assert(source.data.type === VALUE_TYPE);
           console.assert(source.data.selected === true);
           const parent = source.parent;
+          // if a value is selected, the parent must also be selected
+          if (!parent.data.selected) { parent.data.selected = null; }
           parent.data.selected = true;
+          parent.ui.selected = true;
           const siblings = parent.children || parent._children;
           for (const d of siblings) {
             if (d === source) { continue; }
@@ -208,16 +232,22 @@ class MyTree {
           }
         };
 
-        this.setValueSelected = (d) => {
-          if (d.data.resolved === false) {
-            const v = window.prompt(`Value for [${d.parent.ui.name}]:`, "");
-            if (!v) { return; }
-            d.ui.inputValue = v;
-            d.ui.name = v + " (*)";
+        this.setValueSelected = (d, ask) => {
+          if (!d.data.resolved) {
+            if (ask || d.ui.value == null) {
+              const v = window.prompt(`Value for [${d.parent.ui.name}]:`, "true");
+              if (!v) { return false; }
+              d.ui.value = v;
+              d.ui.name = v + " (*)";
+              d.ui.selected = true;
+            } else {
+              d.ui.selected = null;
+            }
+          } else {
+            d.ui.selected = true;
           }
           d.data.selected = true;
-          d.ui.selected = true;
-          d.parent.ui.selected = true;
+          return true;
         };
 
         this.render = (nodes) => {
