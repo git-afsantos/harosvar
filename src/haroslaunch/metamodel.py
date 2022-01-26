@@ -277,6 +277,9 @@ class RosResource(RosRuntimeEntity):
     def namespace(self):
         return RosName(self.name.namespace)
 
+    def clone(self):
+        raise NotImplementedError()
+
 
 class RosNode(RosResource):
     __slots__ = RosResource.__slots__ + (
@@ -371,6 +374,26 @@ class RosNode(RosResource):
             env=VariantDict(data['environment']),
             condition=LogicValue.from_json(data['condition']),
             location=SourceLocation.from_json(data['traceability']),
+        )
+
+    def clone(self):
+        return RosNode(
+            self.name,
+            self.package,
+            self.executable,
+            system=self.system,
+            args=self.args,
+            machine=self.machine,
+            required=self.is_required,
+            respawn=self.respawns,
+            delay=self.respawn_delay,
+            output=self.output,
+            cwd=self.working_dir,
+            prefix=self.launch_prefix,
+            remaps=VariantDict(self.remaps),
+            env=VariantDict(self.environment),
+            condition=self.condition,
+            location=self.traceability,
         )
 
 
@@ -476,4 +499,14 @@ class RosParameter(RosResource):
             system=data['system'],
             condition=LogicValue.from_json(data['condition']),
             location=SourceLocation.from_json(data['traceability']),
+        )
+
+    def clone(self):
+        return RosParameter(
+            self.name,
+            self.param_type,
+            self.value,
+            system=self.system,
+            condition=self.condition,
+            location=self.traceability,
         )

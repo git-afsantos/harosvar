@@ -117,13 +117,15 @@ SolverResult.to_JSON_object = _solver_result_to_JSON
 
 def _solver_result_from_json(*args):
     data = args[-1]
-    value = data['value']
-    if isinstance(value, list):
-        for i in range(len(value)):
-            if not isinstance(value[i], str):
-                value[i] = _unknown_value_from_json(value[i])
     var_type = data['var_type']
     is_resolved = data['is_resolved']
+    value = data['value']
+    if isinstance(value, list):
+        value = list(value)
+        for i in range(len(value)):
+            if not isinstance(value[i], str):
+                assert isinstance(value[i], dict), str(value[i])
+                value[i] = _unknown_value_from_json(value[i])
     unknown = data['unknown']
     if unknown is not None:
         unknown = list(map(_unknown_value_from_json, unknown))
@@ -131,6 +133,40 @@ def _solver_result_from_json(*args):
 
 
 SolverResult.from_json = _solver_result_from_json
+
+
+def _solver_result_replace(self, data):
+    if self.is_resolved:
+        return self
+    parts = []
+    unknown = False
+    changed = False
+    for i in range(len(self.value)):
+        part = self.value[i]
+        if isinstance(part, str):
+            parts.append(part)
+            continue
+        cmd = data.get(part.cmd)
+        if not cmd:
+            parts.append(part)
+            unknown = True
+            continue
+        args = part.args if len(part.args) > 1 else part.args[0]
+        value = cmd.get(args)
+        if value:
+            parts.append(value)
+            changed = True
+        else:
+            parts.append(part)
+            unknown = True
+    if not changed:
+        return self
+    if unknown:
+        return UnresolvedValue(parts, self.var_type)
+    return ResolvedValue(''.join(parts), self.var_type)
+
+
+SolverResult.replace = _solver_result_replace
 
 
 # alias

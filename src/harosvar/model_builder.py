@@ -5,10 +5,14 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, Mapping
+from typing import Any, Dict, Final, Iterable, Mapping
 
+from haroslaunch.data_structs import SolverResult
 from haroslaunch.launch_interpreter import LaunchInterpreter
+from haroslaunch.logic import LogicVariable
+from haroslaunch.metamodel import RosResource
 from haroslaunch.ros_iface import SimpleRosInterface
+from haroslaunch.sub_parser import convert_to_bool
 import harosvar.analysis as ana
 import harosvar.filesystem as fsys
 from harosvar.model import (
@@ -62,8 +66,10 @@ def build_project(name: str, ws: fsys.Workspace) -> ProjectModel:
 def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputationGraph:
     # FIXME: selection is the JSON structure from viz for now
     cg = RosComputationGraph(RosSystemId('null'))
+    skip = set()
     for launch_data in selection['launch']:
         lffm = model.launch_files[FileId(launch_data['name'])]
+        skip.add(lffm.file)
         args = {}
         for name, value in launch_data['args'].items():
             feature = lffm.arguments[FeatureName(name)]
@@ -73,21 +79,37 @@ def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputat
                 args[feature.arg] = value
         for feature in lffm.nodes.values():
             node = feature.node
-            if node.condition.is_true:
-                cg.nodes.append(node)
-            elif node.condition.is_false:
+            if node.condition.is_false:
                 continue
-            else:
-                continue  # FIXME resolve variables
+            if not node.condition.is_true:
+                node = _replace_variables(node, args)
+            cg.nodes.append(node)
         for feature in lffm.parameters.values():
             param = feature.parameter
-            if param.condition.is_true:
-                cg.parameters.append(param)
-            elif param.condition.is_false:
+            if param.condition.is_false:
                 continue
-            else:
-                continue  # FIXME resolve variables
-    # FIXME handle conditional launch files
+            if not param.condition.is_true:
+                param = _replace_variables(param, args)
+            cg.parameters.append(param)
+    skip.update(selection['discard'])
+    for lffm in model.launch_files.values():
+        if lffm.file in skip:
+            continue
+        var = LogicVariable(f'roslaunch {lffm.file}', lffm.file, name=lffm.file)
+        for feature in lffm.nodes.values():
+            node = feature.node
+            if node.condition.is_false:
+                continue
+            node = node.clone()
+            node.condition = node.condition.join(var)
+            cg.nodes.append(node)
+        for feature in lffm.parameters.values():
+            param = feature.parameter
+            if param.condition.is_false:
+                continue
+            param = param.clone()
+            param.condition = param.condition.join(var)
+            cg.parameters.append(param)
     return cg
 
 
@@ -283,3 +305,33 @@ def _new_system(model: ProjectModel, launch_file: FileId, lfi: LaunchInterpreter
         launch_files=[selection],
         missing_files=list(lfi.missing_includes),
     )
+
+
+###############################################################################
+# Helper Functions - Computation Graph
+###############################################################################
+
+
+def _replace_variables(resource: RosResource, args) -> RosResource:
+    assert not resource.condition.is_true
+    assert not resource.condition.is_false
+    condition = resource.condition
+    scope = {'arg': args}
+    valuation: Dict[str, bool] = {}
+    for var in condition.variables():
+        # var.data should be JSON for a ScopeCondition
+        sr = SolverResult.from_json(var.data['value'])
+        assert not sr.is_resolved
+        sr = sr.replace(scope)
+        if sr.is_resolved:
+            try:
+                valuation[var.name] = convert_to_bool(sr.value)
+            except ValueError:
+                # FIXME report error? should be a valid boolean
+                pass  # remains unknown
+    if not valuation:
+        return resource  # nothing to do
+    condition = condition.replace(valuation)
+    r = resource.clone()
+    r.condition = condition
+    return r

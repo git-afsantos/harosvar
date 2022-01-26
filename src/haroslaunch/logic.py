@@ -76,6 +76,10 @@ class LogicValue(object):
         # iterator
         return None
 
+    def replace(self, valuation):
+        # valuation is a Dict[str, bool] from variable names to boolean values
+        return self
+
     @classmethod
     def from_json(cls, data):
         if data is True:
@@ -193,6 +197,15 @@ class LogicVariable(LogicValue):
     def variables(self):
         yield self
 
+    def replace(self, valuation):
+        # valuation is a Dict[str, bool] from variable names to boolean values
+        value = valuation.get(self.name)
+        if value is True:
+            return LogicValue.T
+        if value is False:
+            return LogicValue.F
+        return self
+
     def to_JSON_object(self):
         try:
             data = self.data.to_JSON_object()
@@ -254,6 +267,12 @@ class LogicNot(LogicValue):
 
     def variables(self):
         yield from self.operand.variables()
+
+    def replace(self, valuation):
+        # valuation is a Dict[str, bool] from variable names to boolean values
+        operand = self.operand.replace(valuation)
+        result = LogicNot(operand)
+        return result.simplify()
 
     def to_JSON_object(self):
         return ['not', self.operand.to_JSON_object()]
@@ -322,6 +341,12 @@ class LogicAnd(LogicValue):
     def variables(self):
         for x in self.operands:
             yield from x.variables()
+
+    def replace(self, valuation):
+        # valuation is a Dict[str, bool] from variable names to boolean values
+        operands = [op.replace(valuation) for op in self.operands]
+        result = LogicAnd(operands)
+        return result.simplify()
 
     def to_JSON_object(self):
         return ['and'] + [arg.to_JSON_object() for arg in self.operands]
@@ -421,6 +446,12 @@ class LogicOr(LogicValue):
     def variables(self):
         for x in self.operands:
             yield from x.variables()
+
+    def replace(self, valuation):
+        # valuation is a Dict[str, bool] from variable names to boolean values
+        operands = [op.replace(valuation) for op in self.operands]
+        result = LogicOr(operands)
+        return result.simplify()
 
     def to_JSON_object(self):
         return ['or'] + [arg.to_JSON_object() for arg in self.operands]
