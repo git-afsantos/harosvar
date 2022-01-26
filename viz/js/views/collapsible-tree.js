@@ -124,7 +124,7 @@ class MyTree {
               // propagate up to the parent
               d.parent.data.selected = true;
               // propagate down to the siblings
-              this.propagateRosLaunchSelection(d);
+              this.propagateRosLaunchSelection(d.parent);
               // change this selection
               d.data.selected = true;
               d.ui.selected = true;
@@ -136,15 +136,25 @@ class MyTree {
 
         this.onSelectValue = (d) => {
           console.assert(d.data.type === VALUE_TYPE);
-          if (d.ui.selected !== d.data.selected) {
-            d.ui.selected = d.data.selected;
-          } else {
-            if (d.data.selected) {
-              console.assert(d.parent.data.selected);
+          const arg = d.parent;
+          if (arg.data.selected === false) { return; }
+          const selected = d.data.selected;
+          if (selected) { console.assert(arg.data.selected); }
+          const cancelled = !this.setValueSelected(d, selected);
+          if (cancelled) {
+            // can only cancel a prompt for unresolved values
+            console.assert(!d.data.resolved);
+            if (selected) {
+              // must have provided a value before
+              console.assert(d.ui.value != null);
             }
-            this.setValueSelected(d, true);
+            // do nothing; retain the previous selection
+            return;
           }
           this.propagateValueSelection(d);
+          // ensure that this value is selected (only UI should be necessary)
+          d.ui.selected = true;
+          d.data.selected = true;
           this.render();
         };
 
@@ -152,7 +162,8 @@ class MyTree {
           console.assert(source.data.type === ROSLAUNCH_TYPE);
           const children = source.children || source._children;
           if (!children) { return; }
-          if (source.data.selected) {
+          const v = source.data.selected;
+          if (v) {
             for (const d of children) {
               // skip those that are already selected
               if (d.data.selected) { continue; }
@@ -164,7 +175,6 @@ class MyTree {
               console.assert(ok);
             }
           } else {
-            const v = source.data.selected;
             for (const d of children) {
               // propagate `null` to deselect all values
               d.ui.selected = null;
@@ -205,7 +215,7 @@ class MyTree {
               }
             }
             const ok = this.setValueSelected(children[i], false);
-            if (ok) { source.ui.previousValue = i; }
+            if (ok) { source.ui.previousValue = children[i].id; }
             return ok;
           } else {
             for (const d of children) {
@@ -219,17 +229,18 @@ class MyTree {
         this.propagateValueSelection = (source) => {
           console.assert(source.data.type === VALUE_TYPE);
           console.assert(source.data.selected === true);
-          const parent = source.parent;
-          // if a value is selected, the parent must also be selected
-          if (!parent.data.selected) { parent.data.selected = null; }
-          parent.data.selected = true;
-          parent.ui.selected = true;
-          const siblings = parent.children || parent._children;
-          for (const d of siblings) {
-            if (d === source) { continue; }
-            d.data.selected = false;
-            d.ui.selected = false;
+          const arg = source.parent;
+          const roslaunch = arg.parent;
+          if (!roslaunch.data.selected) {
+            // propagate all the way up to the launch file
+            roslaunch.data.selected = true;
+            this.propagateRosLaunchSelection(roslaunch);
           }
+          arg.ui.selected = true;
+          arg.data.selected = true;
+          // ensure that this value is selected again
+          arg.ui.previousValue = source.id;
+          this.propagateArgSelection(arg);
         };
 
         this.setValueSelected = (d, ask) => {

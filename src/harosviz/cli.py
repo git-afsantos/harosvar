@@ -195,7 +195,7 @@ def _viz_arg_feature_json(feature):
         'name': feature.name,
         'selected': None,
         'type': 'arg',
-        'default': default,
+        'defaultValue': default,
         'children': children,
     }
     for d in children:
