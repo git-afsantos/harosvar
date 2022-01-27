@@ -71,7 +71,7 @@ class MyTree {
         this.onIssueIconClick = (event, d) => {
           event.preventDefault();
           event.stopImmediatePropagation();
-          alert("You clicked the warning icon ⚠️");
+          alert(d.issues.join("\n"));
         };
 
         this.onFeatureLabelClick = (event, d) => {
@@ -96,6 +96,7 @@ class MyTree {
           if (d.ui.selected !== d.data.selected) {
             d.ui.selected = d.data.selected;
           } else {
+            d.issues = [];
             if (d.data.selected) {
               d.data.selected = false;
               d.ui.selected = false;
@@ -274,8 +275,13 @@ class MyTree {
           let c = 0;
           for (const lf of files) {
             if (lf === d) { continue; }
-            for (const filename of lf.data.conflicts) {
+            console.log("file", lf.data.name);
+            console.log("conflicts", lf.data.conflicts);
+            for (const [filename, condition] of Object.entries(lf.data.conflicts)) {
+              console.log("check", filename, "vs", d.data.name);
+              console.log("condition", condition);
               if (filename === d.data.name) {
+                // TODO condition
                 c += 1;
               }
             }

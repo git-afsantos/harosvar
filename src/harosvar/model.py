@@ -251,6 +251,6 @@ class ProjectModel:
 
 
 def helper_serialize(inst, field, value):
-    if isinstance(value, (RosNode, RosParameter, SolverResult)):
+    if isinstance(value, (RosNode, RosParameter, SolverResult, LogicValue)):
         return value.to_JSON_object()
     return value

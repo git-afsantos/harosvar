@@ -259,7 +259,7 @@ def _file_conflicts(model: LaunchFeatureModel, cd: ana.CompatibilityDict):
     compatibility = cd[model.file]
     for uid, condition in compatibility.items():
         if not condition.is_true and uid != model.file:
-            model.conflicts.[FeatureName(f'roslaunch:{uid}')] = condition
+            model.conflicts[FeatureName(f'roslaunch:{uid}')] = condition
 
 
 ###############################################################################

@@ -176,16 +176,20 @@ def _viz_feature_model_json(model: ProjectModel):
 
 
 def _viz_launch_feature_json(fm):
-    conflicts = list(fm.conflicts)
-    for i in range(len(conflicts)):
-        assert conflicts[i].startswith('roslaunch:')
-        conflicts[i] = conflicts[i][10:]
+    conflicts = {}
+    for name, condition in fm.conflicts.items():
+        assert name.startswith('roslaunch:')
+        launch_file = name[10:]
+        if condition.is_true:
+            conflicts[launch_file] = True
+        else:
+            conflicts[launch_file] = False
     return {
         'name': fm.file,
         'selected': None,
         'type': 'roslaunch',
         'children': [_viz_arg_feature_json(d) for d in fm.arguments.values()],
-        'conflicts': [],
+        'conflicts': conflicts,
     }
 
 
