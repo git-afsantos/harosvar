@@ -141,7 +141,7 @@ class LaunchFeatureModel:
     parameters: Dict[FeatureName, ParameterFeature] = attr.Factory(dict)
     # TODO: machines
     dependencies: Set[FeatureName] = attr.Factory(set)
-    conflicts: Set[FeatureName] = attr.Factory(set)
+    conflicts: Dict[FeatureName, LogicValue] = attr.Factory(dict)
 
     def __attrs_post_init__(self):
         if not self.name:
@@ -158,7 +158,10 @@ class LaunchFeatureModel:
         src = data['parameters'].items()
         params = {FeatureName(k): ParameterFeature.from_json(v) for k, v in src}
         dependencies = set(FeatureName(d) for d in data['dependencies'])
-        conflicts = set(FeatureName(c) for c in data['conflicts'])
+        conflicts = {
+            FeatureName(k): LogicValue.from_json(v)
+            for k, v in data['conflicts'].items()
+        }
         return cls(
             file,
             name=name,

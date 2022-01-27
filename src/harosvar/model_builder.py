@@ -258,8 +258,8 @@ def _include_dependencies(model: LaunchFeatureModel, lfi: LaunchInterpreter):
 def _file_conflicts(model: LaunchFeatureModel, cd: ana.CompatibilityDict):
     compatibility = cd[model.file]
     for uid, condition in compatibility.items():
-        if condition.is_false and uid != model.file:
-            model.conflicts.add(FeatureName(f'roslaunch:{uid}'))
+        if not condition.is_true and uid != model.file:
+            model.conflicts.[FeatureName(f'roslaunch:{uid}')] = condition
 
 
 ###############################################################################
