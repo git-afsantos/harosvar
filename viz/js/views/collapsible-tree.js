@@ -20,6 +20,8 @@ const ROSLAUNCH_TYPE = "roslaunch";
 const ARG_TYPE = "arg";
 const VALUE_TYPE = "value";
 
+const ICON_WARN = "⚠️";
+
 function selectionIcon(value, automatic) {
   if (value) { return automatic ? `(${ICON_TRUE})` : ICON_TRUE; }
   if (value === false) { return automatic ? `(${ICON_FALSE})` : ICON_FALSE; }
@@ -66,6 +68,12 @@ class MyTree {
             this.render();
         };
 
+        this.onIssueIconClick = (event, d) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          alert("You clicked the warning icon ⚠️");
+        };
+
         this.onFeatureLabelClick = (event, d) => {
             event.preventDefault();
             event.stopImmediatePropagation();
@@ -97,6 +105,7 @@ class MyTree {
             } else {
               d.data.selected = true;
               d.ui.selected = true;
+              this.checkFileConflicts(d);
             }
             this.propagateRosLaunchSelection(d);
           }
@@ -260,6 +269,22 @@ class MyTree {
           return true;
         };
 
+        this.checkFileConflicts = (d) => {
+          const files = this.root.children || this.root._children;
+          let c = 0;
+          for (const lf of files) {
+            if (lf === d) { continue; }
+            for (const filename of lf.data.conflicts) {
+              if (filename === d.data.name) {
+                c += 1;
+              }
+            }
+          }
+          if (c > 0) {
+            d.issues = [`This launch file causes conflicts with ${c} other files.`];
+          }
+        };
+
         this.render = (nodes) => {
             if (!nodes) { nodes = this.svg.selectAll("g.tree-node"); }
             nodes.each(function (d) {
@@ -289,6 +314,8 @@ class MyTree {
                     .text(d.ui.name);
                 label.select("tspan.text-icon")
                     .text(automatic ? `(${icon})` : icon);
+                label.select("tspan.issue-icon")
+                    .text(d.issues ? ICON_WARN : "");
             });
         };
 
@@ -350,6 +377,11 @@ class MyTree {
                 .classed("text-icon", true)
                 .attr("dx", ".5em")
                 .text(function (d) { return selectionIcon(d.data.selected); });
+            tlabel.append("tspan")
+                .classed("issue-icon", true)
+                .attr("dx", ".5em")
+                .text(function (d) { return d.issues ? ICON_WARN : ""; })
+                .on("click", this.onIssueIconClick);
             nodeEnter.append("svg:title").text(function (d) {
                 return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
             });

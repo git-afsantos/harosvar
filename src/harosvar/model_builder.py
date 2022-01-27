@@ -7,12 +7,12 @@
 
 from typing import Any, Dict, Final, Iterable, Mapping
 
-from haroslaunch.data_structs import SolverResult
+from haroslaunch.data_structs import ResolvedValue, SolverResult
 from haroslaunch.launch_interpreter import LaunchInterpreter
-from haroslaunch.logic import LogicVariable
-from haroslaunch.metamodel import RosResource
+from haroslaunch.logic import LogicValue, LogicVariable
+from haroslaunch.metamodel import RosNode, RosParameter, RosResource
 from haroslaunch.ros_iface import SimpleRosInterface
-from haroslaunch.sub_parser import convert_to_bool
+from haroslaunch.sub_parser import convert_value, convert_to_bool
 import harosvar.analysis as ana
 import harosvar.filesystem as fsys
 from harosvar.model import (
@@ -81,15 +81,13 @@ def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputat
             node = feature.node
             if node.condition.is_false:
                 continue
-            if not node.condition.is_true:
-                node = _replace_variables(node, args)
+            node = _replace_node_variables(node, args)
             cg.nodes.append(node)
         for feature in lffm.parameters.values():
             param = feature.parameter
             if param.condition.is_false:
                 continue
-            if not param.condition.is_true:
-                param = _replace_variables(param, args)
+            param = _replace_param_variables(param, args)
             cg.parameters.append(param)
     skip.update(selection['discard'])
     for lffm in model.launch_files.values():
@@ -312,11 +310,13 @@ def _new_system(model: ProjectModel, launch_file: FileId, lfi: LaunchInterpreter
 ###############################################################################
 
 
-def _replace_variables(resource: RosResource, args) -> RosResource:
-    assert not resource.condition.is_true
-    assert not resource.condition.is_false
-    condition = resource.condition
-    scope = {'arg': args}
+def _replace_resource_variables(resource: RosResource, scope) -> RosResource:
+    if not resource.condition.is_true and not resource.condition.is_false:
+        resource.condition = _replace_variables(resource.condition, scope)
+    return resource
+
+
+def _replace_variables(condition: LogicValue, scope: Dict[str, Dict[Any, str]]) -> LogicValue:
     valuation: Dict[str, bool] = {}
     for var in condition.variables():
         # var.data should be JSON for a ScopeCondition
@@ -330,8 +330,49 @@ def _replace_variables(resource: RosResource, args) -> RosResource:
                 # FIXME report error? should be a valid boolean
                 pass  # remains unknown
     if not valuation:
-        return resource  # nothing to do
-    condition = condition.replace(valuation)
-    r = resource.clone()
-    r.condition = condition
-    return r
+        return condition  # nothing to do
+    return condition.replace(valuation)
+
+
+def _replace_node_variables(node: RosNode, args) -> RosNode:
+    scope = {'arg': args}
+    node = node.clone()
+    _replace_resource_variables(node, scope)
+    attributes = (
+        'machine', 'is_required', 'respawns', 'respawn_delay',
+        'args', 'output', 'working_dir', 'launch_prefix',
+    )
+    for attribute in attributes:
+        sr = getattr(node, attribute)
+        if sr is None or sr.is_resolved:
+            continue
+        sr = sr.replace(scope)
+        if sr.is_resolved:
+            setattr(node, attribute, sr)
+    attributes = ('remaps', 'environment')
+    for attribute in attributes:
+        vd = getattr(node, attribute)
+        for key, data in vd.items():
+            if data.is_deterministic:
+                continue
+            for value, condition in reversed(data.possible_values()):
+                condition = _replace_variables(condition, scope)
+                data.set(value, condition)
+    return node
+
+
+def _replace_param_variables(param: RosParameter, args) -> RosParameter:
+    scope = {'arg': args}
+    param = param.clone()
+    _replace_resource_variables(param, scope)
+    sr = param.value
+    if not sr.is_resolved:
+        sr = sr.replace(scope)
+        if sr.is_resolved:
+            try:
+                value = convert_value(sr.value, param_type=param.param_type)
+                sr = ResolvedValue(value, param.param_type)
+            except ValueError:
+                pass  # FIXME should report an error?
+            param.value = sr
+    return param

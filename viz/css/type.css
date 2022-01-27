@@ -230,7 +230,7 @@ p {
 }
 
 #feature-model-container .tree-node text:hover {
-  font-weight: bold;
+  fill: steelblue;
 }
 
 #feature-model-container .tree-node:first-of-type text {
@@ -247,8 +247,7 @@ p {
   font-weight: bold;
 }
 
-/*
-#feature-model-container .tree-node text.feature-label > tspan {
-    font-weight: bold;
+#feature-model-container .tree-node text.feature-label > tspan.issue-icon {
+    font-weight: normal;
+    font-size: 1.5em;
 }
-*/
