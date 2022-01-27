@@ -162,7 +162,12 @@ def _calculate_computation_graph(root: str):
     print(f'Calculate Computation Graph for project "{project_id}"')
     _load_project_model(root, project_id)
     cg = build_computation_graph_adhoc(project_model, data)
-    return cg.serialize()
+    return _cg_to_old_format(cg)
+
+
+###############################################################################
+# Helpers
+###############################################################################
 
 
 def _viz_feature_model_json(model: ProjectModel):
@@ -235,6 +240,78 @@ def _load_project_model(root, project_id):
         path = Path(root).resolve() / 'data' / project_id / 'model.json'
         data = json.loads(path.read_text(encoding='utf-8'))
         project_model = ProjectModel.from_json(data)
+
+
+def _cg_to_old_format(cg):
+    publishers = []
+    subscribers = []
+    servers = []
+    clients = []
+    reads = []
+    writes = []
+    links = {
+        'publishers': publishers,
+        'subscribers': subscribers,
+        'servers': servers,
+        'clients': clients,
+        'reads': reads,
+        'writes': writes,
+    }
+    nodes = []
+    topics = []
+    services = []
+    parameters = []
+    launch = []
+    dependencies = []
+    conditional = 0
+    remaps = 0
+    unresolved = 0
+    collisions = 0
+    return {
+        'id': 'null',
+        'nodes': nodes,
+        'topics': topics,
+        'services': services,
+        'parameters': parameters,
+        'links': links,
+        'launch': launch,
+        'environment': [],
+        'dependencies': dependencies,
+        'conditional': conditional,
+        'remaps': remaps,
+        'unresolved': unresolved,
+        'collisions': collisions,
+        'hpl': {'assumptions': [], 'properties': []},
+        'queries': [],
+    }
+
+
+def _old_nodes(cg):
+    data = []
+    for node in cg.nodes:
+        data.append({
+            'uid': str(id(node)),
+            'name': str(node.name).replace('*', '?'),
+            'type': f'{node.package}/{node.executable}',
+            'args': node.args.as_string(),
+            'publishers': [],
+            'subscribers': [],
+            'servers': [],
+            'clients': [],
+            'reads': [],
+            'writes': [],
+            'conditions': [],
+            'traceability': {
+                'package': node.traceability.package,
+                'file': node.traceability.file,
+                'line': node.traceability.line,
+                'column': node.traceability.column,
+                'function': None,
+                'class': None,
+            },
+            'variables': [],
+        })
+    return data
 
 
 ###############################################################################
