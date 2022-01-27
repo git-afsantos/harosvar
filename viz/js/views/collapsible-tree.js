@@ -272,22 +272,20 @@ class MyTree {
 
         this.checkFileConflicts = (d) => {
           const files = this.root.children || this.root._children;
-          let c = 0;
+          let c = [], s = [];
           for (const lf of files) {
             if (lf === d) { continue; }
-            console.log("file", lf.data.name);
-            console.log("conflicts", lf.data.conflicts);
+            if (lf.data.selected === false) { continue; }
             for (const [filename, condition] of Object.entries(lf.data.conflicts)) {
-              console.log("check", filename, "vs", d.data.name);
-              console.log("condition", condition);
               if (filename === d.data.name) {
                 // TODO condition
-                c += 1;
+                if (lf.data.selected == null || !condition) {
+                  d.issues.push(`This launch file may conflict with ${lf.data.name}.`);
+                } else {
+                  d.issues.push(`This launch file has conflicts with ${lf.data.name}.`);
+                }
               }
             }
-          }
-          if (c > 0) {
-            d.issues = [`This launch file causes conflicts with ${c} other files.`];
           }
         };
 
@@ -321,7 +319,7 @@ class MyTree {
                 label.select("tspan.text-icon")
                     .text(automatic ? `(${icon})` : icon);
                 label.select("tspan.issue-icon")
-                    .text(d.issues ? ICON_WARN : "");
+                    .text(d.issues.length > 0 ? ICON_WARN : "");
             });
         };
 
@@ -386,7 +384,7 @@ class MyTree {
             tlabel.append("tspan")
                 .classed("issue-icon", true)
                 .attr("dx", ".5em")
-                .text(function (d) { return d.issues ? ICON_WARN : ""; })
+                .text(function (d) { return d.issues.length > 0 ? ICON_WARN : ""; })
                 .on("click", this.onIssueIconClick);
             nodeEnter.append("svg:title").text(function (d) {
                 return d.ancestors().reverse().map((d) => { return d.data.name; }).join("/");
@@ -487,9 +485,9 @@ class MyTree {
             this.i++;
             d.ui = {
                 name: d.data.name,
-                selected: d.data.selected,
-                xor: d.data.type === 'arg'
+                selected: d.data.selected
             };
+            d.issues = [];
         });
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
