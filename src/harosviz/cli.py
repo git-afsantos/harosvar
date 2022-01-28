@@ -27,6 +27,7 @@ from pathlib import Path
 import sys
 
 from bottle import request, route, run, static_file
+from haroslaunch.data_structs import SolverResult
 from harosvar.model import ProjectModel
 from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
@@ -257,10 +258,8 @@ def _cg_to_old_format(cg):
         'reads': reads,
         'writes': writes,
     }
-    nodes = []
     topics = []
     services = []
-    parameters = []
     launch = []
     dependencies = []
     conditional = 0
@@ -269,10 +268,10 @@ def _cg_to_old_format(cg):
     collisions = 0
     return {
         'id': 'null',
-        'nodes': nodes,
+        'nodes': _old_nodes(cg),
         'topics': topics,
         'services': services,
-        'parameters': parameters,
+        'parameters': _old_parameters(cg),
         'links': links,
         'launch': launch,
         'environment': [],
@@ -300,18 +299,96 @@ def _old_nodes(cg):
             'clients': [],
             'reads': [],
             'writes': [],
-            'conditions': [],
-            'traceability': {
-                'package': node.traceability.package,
-                'file': node.traceability.file,
-                'line': node.traceability.line,
-                'column': node.traceability.column,
-                'function': None,
-                'class': None,
-            },
+            'conditions': _old_conditions(node.condition),
+            'traceability': _old_traceability(node.traceability.package),
             'variables': [],
         })
     return data
+
+
+def _old_parameters(cg):
+    data = []
+    for param in cg.parameters:
+        data.append({
+            'uid': str(id(param)),
+            'name': str(param.name).replace('*', '?'),
+            'type': param.param_type,
+            'value': param.value if param.value.is_resolved else param.value.as_string(),
+            'reads': [],
+            'writes': [],
+            'conditions': _old_conditions(param.condition),
+            'traceability': [_old_traceability(param.traceability)],
+            'variables': [],
+        })
+    return data
+
+
+def _old_conditions(condition):
+    print('converting condition to old format')
+    print(condition)
+    if condition.is_or:
+        condition = condition.operands[0]  # FIXME
+    if condition.is_and:
+        parts = condition.operands
+    else:
+        parts = [condition]
+    result = []
+    for part in parts:
+        negate = False
+        if part.is_not:
+            part = part.operand
+            negate = True
+        if not part.is_variable:
+            continue
+        if isinstance(part.data, str):
+            # ad hoc variable created with feature model
+            result.append({
+                'condition': part.text,
+                'statement': 'roslaunch',
+                'location': _old_traceability(None),
+            })
+        else:
+            # part.data: SourceCondition
+            # part.data.value: SolverResult
+            statement = part.data['statement']
+            if negate:
+                statement = 'unless' if statement == 'if' else 'if'
+            result.append({
+                'condition': SolverResult.from_json(part.data['value']).as_string(),
+                'statement': statement,
+                'location': _old_traceability(part.data['location']),
+            })
+    return result
+
+
+def _old_traceability(traceability):
+    if traceability is None:
+        return {
+            'package': None,
+            'file': None,
+            'line': None,
+            'column': None,
+            'function': None,
+            'class': None,
+        }
+    elif isinstance(traceability, dict):
+        return {
+            'package': traceability['package'],
+            'file': traceability['filepath'],
+            'line': traceability['line'],
+            'column': traceability['column'],
+            'function': None,
+            'class': None,
+        }
+    else:
+        return {
+            'package': traceability.package,
+            'file': traceability.filepath,
+            'line': traceability.line,
+            'column': traceability.column,
+            'function': None,
+            'class': None,
+        }
 
 
 ###############################################################################
