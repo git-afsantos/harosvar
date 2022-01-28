@@ -15,6 +15,7 @@ except ImportError:
     import re
 
 from .data_structs import (
+    ConditionalData,
     ResolvedBool,
     ResolvedDouble,
     ResolvedInt,
@@ -357,6 +358,12 @@ class RosNode(RosResource):
 
     @classmethod
     def from_json(cls, data):
+        remaps = VariantDict()
+        for key, value in data['remaps'].items():
+            remaps[key] = ConditionalData.from_json(value)
+        env = VariantDict()
+        for key, value in data['environment'].items():
+            env[key] = ConditionalData.from_json(value)
         return cls(
             data['name'],
             data['package'],
@@ -370,8 +377,8 @@ class RosNode(RosResource):
             output=_sr_from_json(data['output']),
             cwd=_sr_from_json(data['working_dir']),
             prefix=_sr_from_json(data['launch_prefix']),
-            remaps=VariantDict(data['remaps']),
-            env=VariantDict(data['environment']),
+            remaps=remaps,
+            env=env,
             condition=LogicValue.from_json(data['condition']),
             location=SourceLocation.from_json(data['traceability']),
         )

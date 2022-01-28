@@ -9,7 +9,7 @@
 
 from collections import defaultdict, namedtuple
 
-from .logic import LOGIC_TRUE
+from .logic import LogicValue, LOGIC_TRUE
 
 ###############################################################################
 # Constants
@@ -284,9 +284,10 @@ class ConditionalData(object):
 
     def possible_values(self):
         values = []
-        for item in reversed(self._variants):
-            values.append(item)
-        values.append((self._base, LOGIC_TRUE))
+        if self._base is not None:
+            for item in reversed(self._variants):
+                values.append(item)
+            values.append((self._base, LOGIC_TRUE))
         return values
 
     def get_value(self):
@@ -300,6 +301,18 @@ class ConditionalData(object):
             self._variants = []
         elif not condition.is_false:
             self._variants.append((value, condition))
+
+    def to_JSON_object(self):
+        return {
+            'base': self._base,
+            'variants': [[v, c.to_JSON_object()] for v, c in self._variants]
+        }
+
+    @classmethod
+    def from_json(cls, data):
+        base = data['base']
+        variants = [(d[0], LogicValue.from_json(d[1])) for d in data['variants']]
+        return cls(value=base, variants=variants)
 
     def __repr__(self):
         return '{}(value={!r}, variants={!r})'.format(

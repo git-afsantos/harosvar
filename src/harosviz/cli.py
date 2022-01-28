@@ -28,7 +28,7 @@ import sys
 
 from bottle import request, route, run, static_file
 from haroslaunch.data_structs import SolverResult
-from harosvar.model import Node, ProjectModel
+from harosvar.model import FileId, Node, ProjectModel
 from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
 
@@ -378,7 +378,26 @@ def _old_links(cg, topics, services):
 
 
 def _old_publishers(cg, topics):
-    pass
+    data = []
+    for link in cg.links:
+        if link.resource_type != 'topic':
+            continue
+        if link.inbound:
+            continue
+        topic = topics[link.resource]
+        data.append({
+            'node': link.node.replace('*', '?'),
+            'topic': link.resource,
+            'type': link.data_type,
+            'name': link.attributes['name'],
+            'queue': link.attributes['queue'],
+            'node_uid': link.attributes['node_uid'],
+            'topic_uid': topic['uid'],
+            'location': link.attributes['location'],
+            'conditions':link.attributes['conditions'],
+            'latched': link.attributes['latched'],
+        })
+    return data
 
 
 def _old_conditions(condition):

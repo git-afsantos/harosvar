@@ -397,11 +397,11 @@ def _links_from_node_data(node_data: Iterable[Node], node: RosNode) -> List[RosL
     for call in datum.advertise_calls:
         for name, condition in _get_final_names(ns, pns, node.remaps, call):
             target = RosName.resolve(name, ns=ns, pns=pns)
-            links.append(_link_publish(node, target, call, condition))
+            links.append(_link_publish(node, target, call, condition, name))
     for call in datum.subscribe_calls:
         for name, condition in _get_final_names(ns, pns, node.remaps, call):
             target = RosName.resolve(name, ns=ns, pns=pns)
-            links.append(_link_subscribe(node, target, call, condition))
+            links.append(_link_subscribe(node, target, call, condition, name))
     for call in datum.srv_server_calls:
         pass
     for call in datum.srv_client_calls:
@@ -422,8 +422,10 @@ def _get_final_names(ns, pns, remaps, call):
     return remaps
 
 
-def _link_publish(node: RosNode, name: str, call: Any, condition: LogicValue):
+def _link_publish(node: RosNode, name: str, call: Any, condition: LogicValue, source_name: str):
     more = {
+        'node_uid': str(id(node)),
+        'name': source_name,
         'queue': call['queue'],
         'depth': call['depth'],
         'conditions': call['conditions'],
@@ -444,8 +446,9 @@ def _link_publish(node: RosNode, name: str, call: Any, condition: LogicValue):
     )
 
 
-def _link_subscribe(node: RosNode, name: str, call: Any, condition: LogicValue):
+def _link_subscribe(node: RosNode, name: str, call: Any, condition: LogicValue, source_name: str):
     more = {
+        'name': source_name,
         'queue': call['queue'],
         'depth': call['depth'],
         'conditions': call['conditions'],
