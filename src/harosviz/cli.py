@@ -28,7 +28,7 @@ import sys
 
 from bottle import request, route, run, static_file
 from haroslaunch.data_structs import SolverResult
-from harosvar.model import ProjectModel
+from harosvar.model import Node, ProjectModel
 from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
 
@@ -162,7 +162,8 @@ def _calculate_computation_graph(root: str):
     project_id = data['project']
     print(f'Calculate Computation Graph for project "{project_id}"')
     _load_project_model(root, project_id)
-    cg = build_computation_graph_adhoc(project_model, data)
+    nodes = _load_project_nodes(root)
+    cg = build_computation_graph_adhoc(project_model, data, nodes)
     return _cg_to_old_format(cg)
 
 
@@ -243,23 +244,29 @@ def _load_project_model(root, project_id):
         project_model = ProjectModel.from_json(data)
 
 
+def _load_project_nodes(root):
+    path = Path(root).resolve() / 'data' / project_model.name / 'nodes.json'
+    data = json.loads(path.read_text(encoding='utf-8'))
+    nodes = []
+    for item in data:
+        package = item['package']
+        nodes.append(Node(
+            package,
+            item['name'],
+            files=[FileId(f'{package}/{fp}') for fp in item['files']],
+            advertise_calls=item['advertise'],
+            subscribe_calls=item['subscribe'],
+            srv_server_calls=item['service'],
+            srv_client_calls=item['client'],
+            param_get_calls=item['readParam'],
+            param_set_calls=item['writeParam'],
+        ))
+    return nodes
+
+
 def _cg_to_old_format(cg):
-    publishers = []
-    subscribers = []
-    servers = []
-    clients = []
-    reads = []
-    writes = []
-    links = {
-        'publishers': publishers,
-        'subscribers': subscribers,
-        'servers': servers,
-        'clients': clients,
-        'reads': reads,
-        'writes': writes,
-    }
-    topics = []
-    services = []
+    topics = _old_topics(cg)
+    services = {}
     launch = []
     dependencies = []
     conditional = 0
@@ -269,10 +276,10 @@ def _cg_to_old_format(cg):
     return {
         'id': 'null',
         'nodes': _old_nodes(cg),
-        'topics': topics,
-        'services': services,
+        'topics': list(topics.values()),
+        'services': list(services.values()),
         'parameters': _old_parameters(cg),
-        'links': links,
+        'links': _old_links(cg, topics, services),
         'launch': launch,
         'environment': [],
         'dependencies': dependencies,
@@ -321,6 +328,57 @@ def _old_parameters(cg):
             'variables': [],
         })
     return data
+
+
+def _old_topics(cg):
+    data = {}
+    for link in cg.links:
+        if link.resource_type != 'topic':
+            continue
+        name = link.resource
+        datum = data.get(name)
+        if datum is None:
+            datum = {
+                'uid': '',
+                'name': name,
+                'type': '',
+                'publishers': [],
+                'subscribers': [],
+                'conditions': [],
+                'traceability': [],
+                'variables': [],
+            }
+            datum['uid'] = str(id(datum))
+            data[name] = datum
+        datum['type'] = link.data_type
+        node = link.node.replace('*', '?')
+        if link.inbound:
+            datum['subscribers'].append(node)
+        else:
+            datum['publishers'].append(node)
+        datum['conditions'].extend(_old_conditions(link.condition))
+        datum['traceability'].append(dict(link.attributes['location']))
+    return data
+
+
+def _old_links(cg, topics, services):
+    subscribers = []
+    servers = []
+    clients = []
+    reads = []
+    writes = []
+    return {
+        'publishers': _old_publishers(cg, topics),
+        'subscribers': subscribers,
+        'servers': servers,
+        'clients': clients,
+        'reads': reads,
+        'writes': writes,
+    }
+
+
+def _old_publishers(cg, topics):
+    pass
 
 
 def _old_conditions(condition):

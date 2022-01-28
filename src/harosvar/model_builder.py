@@ -5,12 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, Mapping
+from typing import Any, Dict, Final, Iterable, List, Mapping
 
 from haroslaunch.data_structs import ResolvedValue, SolverResult
 from haroslaunch.launch_interpreter import LaunchInterpreter
 from haroslaunch.logic import LogicValue, LogicVariable
-from haroslaunch.metamodel import RosNode, RosParameter, RosResource
+from haroslaunch.metamodel import RosName, RosNode, RosParameter, RosResource
 from haroslaunch.ros_iface import SimpleRosInterface
 from haroslaunch.sub_parser import convert_value, convert_to_bool
 import harosvar.analysis as ana
@@ -22,11 +22,13 @@ from harosvar.model import (
     File,
     FileId,
     LaunchFeatureModel,
+    Node,
     NodeFeature,
     Package,
     ParameterFeature,
     ProjectModel,
     RosComputationGraph,
+    RosLink,
     RosSystem,
     RosSystemId,
 )
@@ -63,8 +65,10 @@ def build_project(name: str, ws: fsys.Workspace) -> ProjectModel:
     return model
 
 
-def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputationGraph:
+def build_computation_graph_adhoc(model: ProjectModel, selection, node_data) -> RosComputationGraph:
     # FIXME: selection is the JSON structure from viz for now
+    # FIXME: node_data should be part of the project model
+    # FIXME: node_data contains function calls still in pure JSON
     cg = RosComputationGraph(RosSystemId('null'))
     skip = set()
     for launch_data in selection['launch']:
@@ -83,6 +87,7 @@ def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputat
                 continue
             node = _replace_node_variables(node, args)
             cg.nodes.append(node)
+            cg.links.extend(_links_from_node_data(node_data, node))
         for feature in lffm.parameters.values():
             param = feature.parameter
             if param.condition.is_false:
@@ -101,6 +106,7 @@ def build_computation_graph_adhoc(model: ProjectModel, selection) -> RosComputat
             node = node.clone()
             node.condition = node.condition.join(var)
             cg.nodes.append(node)
+            cg.links.extend(_links_from_node_data(node_data, node))
         for feature in lffm.parameters.values():
             param = feature.parameter
             if param.condition.is_false:
@@ -376,3 +382,84 @@ def _replace_param_variables(param: RosParameter, args) -> RosParameter:
                 pass  # FIXME should report an error?
             param.value = sr
     return param
+
+
+def _links_from_node_data(node_data: Iterable[Node], node: RosNode) -> List[RosLink]:
+    # fetch the corresponding node data
+    for datum in node_data:
+        if datum.package == node.package and datum.executable == node.executable:
+            break
+    else:
+        return []  # not found
+    links = []
+    ns = node.name.namespace
+    pns = str(node.name)
+    for call in datum.advertise_calls:
+        for name, condition in _get_final_names(ns, pns, node.remaps, call):
+            target = RosName.resolve(name, ns=ns, pns=pns)
+            links.append(_link_publish(node, target, call, condition))
+    for call in datum.subscribe_calls:
+        for name, condition in _get_final_names(ns, pns, node.remaps, call):
+            target = RosName.resolve(name, ns=ns, pns=pns)
+            links.append(_link_subscribe(node, target, call, condition))
+    for call in datum.srv_server_calls:
+        pass
+    for call in datum.srv_client_calls:
+        pass
+    for call in datum.param_get_calls:
+        pass
+    for call in datum.param_set_calls:
+        pass
+    return links
+
+
+def _get_final_names(ns, pns, remaps, call):
+    call_ns = RosName.resolve(call['namespace'], ns=ns, pns=pns)
+    source_name = RosName.resolve(call['name'], ns=call_ns, pns=pns)
+    remaps = remaps[source_name].possible_values()
+    if not remaps:
+        return [(source_name, LogicValue.T)]
+    return remaps
+
+
+def _link_publish(node: RosNode, name: str, call: Any, condition: LogicValue):
+    more = {
+        'queue': call['queue'],
+        'depth': call['depth'],
+        'conditions': call['conditions'],
+        'variables': call['variables'],
+        'repeats': call['repeats'],
+        'namespace': call['namespace'],
+        'latched': call['latched'],
+        'location': call['location'],
+    }
+    return RosLink(
+        str(node.name),
+        name,
+        'topic',
+        call['type'],
+        inbound=False,
+        condition=condition,
+        attributes=more,
+    )
+
+
+def _link_subscribe(node: RosNode, name: str, call: Any, condition: LogicValue):
+    more = {
+        'queue': call['queue'],
+        'depth': call['depth'],
+        'conditions': call['conditions'],
+        'variables': call['variables'],
+        'repeats': call['repeats'],
+        'namespace': call['namespace'],
+        'location': call['location'],
+    }
+    return RosLink(
+        str(node.name),
+        name,
+        'topic',
+        call['type'],
+        inbound=True,
+        condition=condition,
+        attributes=more,
+    )

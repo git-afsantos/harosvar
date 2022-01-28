@@ -67,6 +67,24 @@ class File:
 
 
 ###############################################################################
+# Executable
+###############################################################################
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class Node:
+    package: str
+    executable: str
+    files: List[FileId] = attr.Factory(list)
+    advertise_calls: List[Any] = attr.Factory(list)
+    subscribe_calls: List[Any] = attr.Factory(list)
+    srv_server_calls: List[Any] = attr.Factory(list)
+    srv_client_calls: List[Any] = attr.Factory(list)
+    param_get_calls: List[Any] = attr.Factory(list)
+    param_set_calls: List[Any] = attr.Factory(list)
+
+
+###############################################################################
 # Feature Model
 ###############################################################################
 
@@ -209,10 +227,22 @@ class RosSystem:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
+class RosLink:
+    node: str
+    resource: str
+    resource_type: str
+    data_type: str
+    inbound: bool = True
+    condition: LogicValue = LogicValue.T
+    attributes: Dict[str, Any] = attr.Factory(dict)
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class RosComputationGraph:
     system: RosSystemId
     nodes: List[RosNode] = attr.Factory(list)
     parameters: List[RosParameter] = attr.Factory(list)
+    links: List[RosLink] = attr.Factory(list)
 
     def serialize(self) -> Dict[str, Any]:
         return attr.asdict(self, value_serializer=helper_serialize)
