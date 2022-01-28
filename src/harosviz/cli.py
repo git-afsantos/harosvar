@@ -362,14 +362,13 @@ def _old_topics(cg):
 
 
 def _old_links(cg, topics, services):
-    subscribers = []
     servers = []
     clients = []
     reads = []
     writes = []
     return {
         'publishers': _old_publishers(cg, topics),
-        'subscribers': subscribers,
+        'subscribers': _old_subscribers(cg, topics),
         'servers': servers,
         'clients': clients,
         'reads': reads,
@@ -396,6 +395,28 @@ def _old_publishers(cg, topics):
             'location': link.attributes['location'],
             'conditions':link.attributes['conditions'],
             'latched': link.attributes['latched'],
+        })
+    return data
+
+
+def _old_subscribers(cg, topics):
+    data = []
+    for link in cg.links:
+        if link.resource_type != 'topic':
+            continue
+        if not link.inbound:
+            continue
+        topic = topics[link.resource]
+        data.append({
+            'node': link.node.replace('*', '?'),
+            'topic': link.resource,
+            'type': link.data_type,
+            'name': link.attributes['name'],
+            'queue': link.attributes['queue'],
+            'node_uid': link.attributes['node_uid'],
+            'topic_uid': topic['uid'],
+            'location': link.attributes['location'],
+            'conditions':link.attributes['conditions'],
         })
     return data
 

@@ -448,6 +448,7 @@ def _link_publish(node: RosNode, name: str, call: Any, condition: LogicValue, so
 
 def _link_subscribe(node: RosNode, name: str, call: Any, condition: LogicValue, source_name: str):
     more = {
+        'node_uid': str(id(node)),
         'name': source_name,
         'queue': call['queue'],
         'depth': call['depth'],
