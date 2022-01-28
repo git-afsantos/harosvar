@@ -50,6 +50,7 @@ THE SOFTWARE.
             this.systemView = new views.RosSystemView({ el: this.$("#ros-system-view") });
 
             this.listenTo(this.collection, "sync", this.onSync);
+            this.listenTo(this.systemView, "calculate", this.onCalculateCG);
         },
 
         render: function () {
@@ -106,6 +107,15 @@ THE SOFTWARE.
 
         onQuerySelect: function () {
             this.graph.setHighlights(this.$querySelect.val());
+        },
+
+        onCalculateCG: function (data) {
+          var config = new models.Configuration(data);
+          this.$querySelect.html('<option value="null">--No highlights--</option>');
+          this.$querySelect.val("null");
+          this.router.navigate("models/" + config.id, this.navigateOptions);
+          this.graph.setModel(config);
+          this.render();
         },
 
         goToIssues: function () {
@@ -813,10 +823,8 @@ THE SOFTWARE.
               body: JSON.stringify(this.cgRequestData())
             })
             .then(response => response.json())
-            .then(data => console.log("Computation Graph:", data))
-            .then(() => {
-              this.$calcButton.prop("disabled", false);
-            });
+            .then(data => this.trigger("calculate", data))
+            .then(() => this.$calcButton.prop("disabled", false));
         },
 
         showInfoModal: function () {

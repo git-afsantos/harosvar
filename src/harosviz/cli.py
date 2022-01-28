@@ -300,7 +300,7 @@ def _old_nodes(cg):
             'reads': [],
             'writes': [],
             'conditions': _old_conditions(node.condition),
-            'traceability': _old_traceability(node.traceability.package),
+            'traceability': [_old_traceability(node.traceability)],
             'variables': [],
         })
     return data
@@ -324,8 +324,6 @@ def _old_parameters(cg):
 
 
 def _old_conditions(condition):
-    print('converting condition to old format')
-    print(condition)
     if condition.is_or:
         condition = condition.operands[0]  # FIXME
     if condition.is_and:
@@ -343,7 +341,7 @@ def _old_conditions(condition):
         if isinstance(part.data, str):
             # ad hoc variable created with feature model
             result.append({
-                'condition': part.text,
+                'condition': part.data,
                 'statement': 'roslaunch',
                 'location': _old_traceability(None),
             })
@@ -353,8 +351,9 @@ def _old_conditions(condition):
             statement = part.data['statement']
             if negate:
                 statement = 'unless' if statement == 'if' else 'if'
+            value = SolverResult.from_json(part.data['value'])
             result.append({
-                'condition': SolverResult.from_json(part.data['value']).as_string(),
+                'condition': value.as_string(wildcard=None),
                 'statement': statement,
                 'location': _old_traceability(part.data['location']),
             })
@@ -363,15 +362,8 @@ def _old_conditions(condition):
 
 def _old_traceability(traceability):
     if traceability is None:
-        return {
-            'package': None,
-            'file': None,
-            'line': None,
-            'column': None,
-            'function': None,
-            'class': None,
-        }
-    elif isinstance(traceability, dict):
+        return None
+    if isinstance(traceability, dict):
         return {
             'package': traceability['package'],
             'file': traceability['filepath'],

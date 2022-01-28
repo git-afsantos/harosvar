@@ -87,6 +87,8 @@ SolverResult = namedtuple(
 def _solver_result_as_string(self, wildcard=VAR_STRING):
     if self.is_resolved:
         return str(self.value)
+    if wildcard is None:
+        return ''.join((x if isinstance(x, STRING_TYPES) else x.text) for x in self.value)
     return ''.join((x if isinstance(x, STRING_TYPES) else wildcard) for x in self.value)
 
 
