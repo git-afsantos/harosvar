@@ -394,12 +394,13 @@ def _links_from_node_data(node_data: Iterable[Node], node: RosNode) -> List[RosL
     links = []
     ns = node.name.namespace
     pns = str(node.name)
+    lfc = node.condition
     for call in datum.advertise_calls:
-        for name, condition in _get_final_names(ns, pns, node.remaps, call):
+        for name, condition in _get_final_names(ns, pns, node.remaps, lfc, call):
             target = RosName.resolve(name, ns=ns, pns=pns)
             links.append(_link_publish(node, target, call, condition, name))
     for call in datum.subscribe_calls:
-        for name, condition in _get_final_names(ns, pns, node.remaps, call):
+        for name, condition in _get_final_names(ns, pns, node.remaps, lfc, call):
             target = RosName.resolve(name, ns=ns, pns=pns)
             links.append(_link_subscribe(node, target, call, condition, name))
     for call in datum.srv_server_calls:
@@ -413,13 +414,16 @@ def _links_from_node_data(node_data: Iterable[Node], node: RosNode) -> List[RosL
     return links
 
 
-def _get_final_names(ns, pns, remaps, call):
+def _get_final_names(ns, pns, remaps, condition, call):
     call_ns = RosName.resolve(call['namespace'], ns=ns, pns=pns)
     source_name = RosName.resolve(call['name'], ns=call_ns, pns=pns)
-    remaps = remaps[source_name].possible_values()
-    if not remaps:
-        return [(source_name, LogicValue.T)]
-    return remaps
+    values = remaps[source_name].possible_values()
+    if not values:
+        return [(source_name, condition)]
+    for i in range(len(values)):
+        name, pred = values[i]
+        values[i] = (name, condition.join(pred))
+    return values
 
 
 def _link_publish(node: RosNode, name: str, call: Any, condition: LogicValue, source_name: str):

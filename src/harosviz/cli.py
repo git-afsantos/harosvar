@@ -384,6 +384,8 @@ def _old_publishers(cg, topics):
         if link.inbound:
             continue
         topic = topics[link.resource]
+        conditions = _old_conditions(link.condition)
+        conditions.extend(link.attributes['conditions'])
         data.append({
             'node': link.node.replace('*', '?'),
             'topic': link.resource,
@@ -393,7 +395,7 @@ def _old_publishers(cg, topics):
             'node_uid': link.attributes['node_uid'],
             'topic_uid': topic['uid'],
             'location': link.attributes['location'],
-            'conditions':link.attributes['conditions'],
+            'conditions': conditions,
             'latched': link.attributes['latched'],
         })
     return data
@@ -407,6 +409,8 @@ def _old_subscribers(cg, topics):
         if not link.inbound:
             continue
         topic = topics[link.resource]
+        conditions = _old_conditions(link.condition)
+        conditions.extend(link.attributes['conditions'])
         data.append({
             'node': link.node.replace('*', '?'),
             'topic': link.resource,
@@ -416,7 +420,7 @@ def _old_subscribers(cg, topics):
             'node_uid': link.attributes['node_uid'],
             'topic_uid': topic['uid'],
             'location': link.attributes['location'],
-            'conditions':link.attributes['conditions'],
+            'conditions': conditions,
         })
     return data
 
