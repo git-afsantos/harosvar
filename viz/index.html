@@ -597,12 +597,12 @@
       %>
     </p>
     <p>
-      <i class="fa fa-question-circle bullet-icon"></i>
-      <strong>Variables:</strong>
+      <i class="fa fa-exclamation-triangle bullet-icon"></i>
+      <strong>Warnings:</strong>
       <%
-        if (!data.variables.length) print("(none)");
-        for (var i = 0; i < data.variables.length; ++i)
-          print('<span class="code">' + data.variables[i] + "</span>\n");
+        if (!data.warnings.length) print("(none)");
+        for (var i = 0; i < data.warnings.length; ++i)
+          print(`<br/>${i+1}. ${data.warnings[i]}\n`);
       %>
     </p>
   </script>

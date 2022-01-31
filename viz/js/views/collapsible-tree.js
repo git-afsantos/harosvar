@@ -96,7 +96,6 @@ class MyTree {
           if (d.ui.selected !== d.data.selected) {
             d.ui.selected = d.data.selected;
           } else {
-            d.issues = [];
             if (d.data.selected) {
               d.data.selected = false;
               d.ui.selected = false;
@@ -106,7 +105,6 @@ class MyTree {
             } else {
               d.data.selected = true;
               d.ui.selected = true;
-              this.checkFileConflicts(d);
             }
             this.propagateRosLaunchSelection(d);
           }
@@ -170,6 +168,11 @@ class MyTree {
 
         this.propagateRosLaunchSelection = (source) => {
           console.assert(source.data.type === ROSLAUNCH_TYPE);
+          const siblings = source.parent.children || source.parent._children;
+          for (const d of siblings) {
+            // update all, including self
+            this.checkFileConflicts(d);
+          }
           const children = source.children || source._children;
           if (!children) { return; }
           const v = source.data.selected;
@@ -271,19 +274,23 @@ class MyTree {
         };
 
         this.checkFileConflicts = (d) => {
+          d.issues = [];
+          if (!d.data.selected) { return; }
           const files = this.root.children || this.root._children;
-          let c = [], s = [];
           for (const lf of files) {
             if (lf === d) { continue; }
             if (lf.data.selected === false) { continue; }
-            for (const [filename, condition] of Object.entries(lf.data.conflicts)) {
+            // `lf.data.selected` is either `true` or `null` at this point
+            for (const [filename, isCompatible] of Object.entries(lf.data.conflicts)) {
+              if (isCompatible === true) { continue; }
               if (filename === d.data.name) {
-                // TODO condition
-                if (lf.data.selected == null || !condition) {
-                  d.issues.push(`This launch file may conflict with ${lf.data.name}.`);
-                } else {
+                if (lf.data.selected && isCompatible === false) {
                   d.issues.push(`This launch file has conflicts with ${lf.data.name}.`);
+                } else {
+                  d.issues.push(`This launch file may conflict with ${lf.data.name}.`);
                 }
+                // if we already found the file, we can break the loop
+                break;
               }
             }
           }

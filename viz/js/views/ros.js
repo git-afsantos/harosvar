@@ -26,6 +26,8 @@ THE SOFTWARE.
     let views = window.App.Views;
     let models = window.App.Models;
 
+    const ICON_WARN = "⚠️";
+
     views.RosBoard = views.BaseView.extend({
         navigateOptions: { trigger: false, replace: true },
 
@@ -305,12 +307,13 @@ THE SOFTWARE.
             _.each(model.get("topics"), this.addTopic, this);
             _.each(model.get("services"), this.addService, this);
             _.each(model.get("parameters"), this.addParameter, this);
-            _.each(model.get("links").publishers, this.addPublisher, this);
-            _.each(model.get("links").subscribers, this.addSubscriber, this);
-            _.each(model.get("links").servers, this.addServer, this);
-            _.each(model.get("links").clients, this.addClient, this);
-            _.each(model.get("links").reads, this.addRead, this);
-            _.each(model.get("links").writes, this.addWrite, this);
+            let links = model.get("links");
+            _.each(links.publishers, this.addPublisher, this);
+            _.each(links.subscribers, this.addSubscriber, this);
+            _.each(links.servers, this.addServer, this);
+            _.each(links.clients, this.addClient, this);
+            _.each(links.reads, this.addRead, this);
+            _.each(links.writes, this.addWrite, this);
             _.each(this.topics, this.connectUnknownTopic, this);
             _.each(this.services, this.connectUnknownService, this);
             _.each(this.params, this.connectUnknownParam, this);
@@ -676,7 +679,15 @@ THE SOFTWARE.
 
             this.d3g = d3.select(this.el).attr("class", "node").on("click", this.onClick);
             this.d3node = this.d3g.append("circle");
-            this.d3text = this.d3g.append("text").attr("text-anchor", "middle").text(this.label);
+            this.d3text = this.d3g.append("text")
+              .classed("name-label", true)
+              .attr("text-anchor", "middle")
+              .text(this.label);
+            this.d3icon = this.d3g.append("text")
+              .classed("issue-icon", true)
+              .attr("text-anchor", "middle")
+              .attr("dominant-baseline", "middle")
+              .text(ICON_WARN);
 
             this.d3g.classed("ros-" + this.model.get("resourceType"), true);
             this.d3g.classed("conditional", this.conditional);
@@ -707,6 +718,8 @@ THE SOFTWARE.
             if (this.visible) {
                 this.d3node.attr("cx", this.x).attr("cy", this.y).attr("r", this.radius);
                 this.d3text.attr("x", this.x).attr("y", this.y);
+                this.d3icon.attr("x", this.x).attr("y", this.y);
+                this.d3icon.classed("hidden", this.model.get("warnings").length === 0);
             }
             return this;
         },

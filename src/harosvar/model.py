@@ -10,7 +10,7 @@ from typing import Any, Dict, Final, List, NewType, Optional, Set, Tuple
 import attr
 from haroslaunch.data_structs import SolverResult
 from haroslaunch.logic import LogicValue
-from haroslaunch.metamodel import RosNode, RosParameter
+from haroslaunch.metamodel import RosNode, RosParameter, RosResource
 
 ###############################################################################
 # Constants
@@ -243,6 +243,25 @@ class RosComputationGraph:
     nodes: List[RosNode] = attr.Factory(list)
     parameters: List[RosParameter] = attr.Factory(list)
     links: List[RosLink] = attr.Factory(list)
+
+    def node_conflicts(self) -> Dict[str, List[RosNode]]:
+        return self._resource_conflicts(self.nodes)
+
+    def param_conflicts(self) -> Dict[str, List[RosParameter]]:
+        return self._resource_conflicts(self.parameters)
+
+    def _resource_conflicts(self, collection) -> Dict[str, List[RosResource]]:
+        conflicts = {}
+        for resource in collection:
+            resources = conflicts.get(resource.name.full)
+            if not resources:
+                conflicts[resource.name.full] = [resource]
+            else:
+                resources.append(resource)
+        for name, resources in list(conflicts.items()):
+            if len(resources) == 1:
+                del conflicts[name]
+        return conflicts
 
     def serialize(self) -> Dict[str, Any]:
         return attr.asdict(self, value_serializer=helper_serialize)

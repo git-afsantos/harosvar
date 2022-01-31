@@ -599,27 +599,35 @@ svg {
 
 
 #package-graph .graph .node text {
-	font-size: 2em;
-    cursor: default;
+  font-size: 2em;
+  cursor: default;
 }
 
-#config-graph .graph .node text {
-    fill: black;
-	font-size: 0.75em;
-    cursor: default;
+#config-graph .graph .node text.name-label {
+  fill: black;
+  font-size: 0.75em;
+  cursor: default;
 }
 
-#config-graph .graph.hide-text .node text {
-    display: none;
+#config-graph .graph .node text.issue-icon {
+  fill: black;
+  font-size: 1.5em;
+  cursor: default;
 }
 
-#config-graph .graph .node.selected text,
-#config-graph .graph .node.hovering text {
+#config-graph .graph.hide-text .node text.name-label,
+#config-graph .graph .node.selected text.issue-icon,
+#config-graph .graph .node.hovering text.issue-icon {
+  display: none;
+}
+
+#config-graph .graph .node.selected text.name-label,
+#config-graph .graph .node.hovering text.name-label {
 	display: inline !important;
 }
 
 #package-graph .graph.zoomed-out .node text,
-#config-graph .graph.zoomed-out .node text {
+#config-graph .graph.zoomed-out .node text.name-label {
 	opacity: 0;
 }
 

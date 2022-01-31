@@ -265,6 +265,7 @@ def _load_project_nodes(root):
 
 
 def _cg_to_old_format(cg):
+    nodes = _old_nodes(cg)
     topics = _old_topics(cg)
     services = {}
     launch = []
@@ -275,11 +276,11 @@ def _cg_to_old_format(cg):
     collisions = 0
     return {
         'id': 'null',
-        'nodes': _old_nodes(cg),
+        'nodes': list(nodes.values()),
         'topics': list(topics.values()),
         'services': list(services.values()),
         'parameters': _old_parameters(cg),
-        'links': _old_links(cg, topics, services),
+        'links': _old_links(cg, nodes, topics, services),
         'launch': launch,
         'environment': [],
         'dependencies': dependencies,
@@ -293,24 +294,40 @@ def _cg_to_old_format(cg):
 
 
 def _old_nodes(cg):
-    data = []
+    data = {}
+    conflicts = cg.node_conflicts()
+    i = 1
     for node in cg.nodes:
-        data.append({
-            'uid': str(id(node)),
-            'name': str(node.name).replace('*', '?'),
-            'type': f'{node.package}/{node.executable}',
-            'args': node.args.as_string(),
-            'publishers': [],
-            'subscribers': [],
-            'servers': [],
-            'clients': [],
-            'reads': [],
-            'writes': [],
-            'conditions': _old_conditions(node.condition),
-            'traceability': [_old_traceability(node.traceability)],
-            'variables': [],
-        })
+        name = node.name.full.replace('*', '?')
+        datum = data.get(name)
+        if datum is None:
+            uid = f'node#{i}'
+            i += 1
+            datum = _old_node_datum(uid, name, node)
+            data[name] = datum
+            if name in conflicts:
+                n = len(conflicts[name]) - 1
+                datum['warnings'].append(f'Name clashes with {n} other nodes.')
     return data
+
+
+def _old_node_datum(uid, name, node):
+    datum = {
+        'uid': uid,
+        'name': name,
+        'type': f'{node.package}/{node.executable}',
+        'args': node.args.as_string(),
+        # 'publishers': [],
+        # 'subscribers': [],
+        # 'servers': [],
+        # 'clients': [],
+        # 'reads': [],
+        # 'writes': [],
+        'conditions': _old_conditions(node.condition),
+        'traceability': [_old_traceability(node.traceability)],
+        'warnings': [],
+    }
+    return datum
 
 
 def _old_parameters(cg):
@@ -325,7 +342,7 @@ def _old_parameters(cg):
             'writes': [],
             'conditions': _old_conditions(param.condition),
             'traceability': [_old_traceability(param.traceability)],
-            'variables': [],
+            'warnings': [],
         })
     return data
 
@@ -339,18 +356,18 @@ def _old_topics(cg):
         datum = data.get(name)
         if datum is None:
             datum = {
-                'uid': '',
+                'uid': f'topic#{len(data) + 1}',
                 'name': name,
-                'type': '',
+                'types': [link.data_type],
                 'publishers': [],
                 'subscribers': [],
                 'conditions': [],
                 'traceability': [],
-                'variables': [],
+                'warnings': [],
             }
-            datum['uid'] = str(id(datum))
             data[name] = datum
-        datum['type'] = link.data_type
+        if link.data_type not in datum['types']:
+            datum['types'].append(link.data_type)
         node = link.node.replace('*', '?')
         if link.inbound:
             datum['subscribers'].append(node)
@@ -358,17 +375,39 @@ def _old_topics(cg):
             datum['publishers'].append(node)
         datum['conditions'].extend(_old_conditions(link.condition))
         datum['traceability'].append(dict(link.attributes['location']))
+        # datum['warnings'].extend(link.attributes['warnings'])
+    for datum in data.values():
+        if len(datum['types']) > 1:
+            datum['warnings'].append('Conflicting message types.')
+        # remove traceability duplicates
+        s = set()
+        traceability = datum['traceability']
+        for i in range(len(traceability) - 1, -1, -1):
+            location = str(traceability[i])
+            if location in s:
+                del traceability[i]
+            else:
+                s.add(location)
+        # remove condition duplicates
+        s = set()
+        conditions = datum['conditions']
+        for i in range(len(conditions) - 1, -1, -1):
+            c = str(conditions[i])
+            if c in s:
+                del conditions[i]
+            else:
+                s.add(c)
     return data
 
 
-def _old_links(cg, topics, services):
+def _old_links(cg, nodes, topics, services):
     servers = []
     clients = []
     reads = []
     writes = []
     return {
-        'publishers': _old_publishers(cg, topics),
-        'subscribers': _old_subscribers(cg, topics),
+        'publishers': _old_publishers(cg, nodes, topics),
+        'subscribers': _old_subscribers(cg, nodes, topics),
         'servers': servers,
         'clients': clients,
         'reads': reads,
@@ -376,23 +415,24 @@ def _old_links(cg, topics, services):
     }
 
 
-def _old_publishers(cg, topics):
+def _old_publishers(cg, nodes, topics):
     data = []
     for link in cg.links:
         if link.resource_type != 'topic':
             continue
         if link.inbound:
             continue
+        node = nodes[link.node.replace('*', '?')]
         topic = topics[link.resource]
         conditions = _old_conditions(link.condition)
         conditions.extend(link.attributes['conditions'])
         data.append({
-            'node': link.node.replace('*', '?'),
-            'topic': link.resource,
+            'node': node['name'],
+            'topic': topic['name'],
             'type': link.data_type,
             'name': link.attributes['name'],
             'queue': link.attributes['queue'],
-            'node_uid': link.attributes['node_uid'],
+            'node_uid': node['uid'],
             'topic_uid': topic['uid'],
             'location': link.attributes['location'],
             'conditions': conditions,
@@ -401,23 +441,24 @@ def _old_publishers(cg, topics):
     return data
 
 
-def _old_subscribers(cg, topics):
+def _old_subscribers(cg, nodes, topics):
     data = []
     for link in cg.links:
         if link.resource_type != 'topic':
             continue
         if not link.inbound:
             continue
+        node = nodes[link.node.replace('*', '?')]
         topic = topics[link.resource]
         conditions = _old_conditions(link.condition)
         conditions.extend(link.attributes['conditions'])
         data.append({
-            'node': link.node.replace('*', '?'),
-            'topic': link.resource,
+            'node': node['name'],
+            'topic': topic['name'],
             'type': link.data_type,
             'name': link.attributes['name'],
             'queue': link.attributes['queue'],
-            'node_uid': link.attributes['node_uid'],
+            'node_uid': node['uid'],
             'topic_uid': topic['uid'],
             'location': link.attributes['location'],
             'conditions': conditions,
