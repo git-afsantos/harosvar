@@ -22,6 +22,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import argparse
 import json
+import logging
 from pathlib import Path
 import sys
 
@@ -209,18 +210,22 @@ def main(argv: Optional[List[str]] = None) -> int:
         # Load additional config files here, e.g., from a path given via args.
         # Alternatively, set sane defaults if configuration is missing.
         config = load_configs(args)
+
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+
         if not shortcircuit(args):
             workflow(args, config)
 
     except KeyboardInterrupt:
-        print('Aborted manually.', file=sys.stderr)
+        logger.error('Aborted manually.')
         return 1
 
     except Exception as err:
         # In real code the `except` would probably be less broad.
         # Turn exceptions into appropriate logs and/or console output.
 
-        print('An unhandled exception crashed the application!', err)
+        logger.exception(err)
 
         # Non-zero return code to signal error.
         # It can, of course, be more fine-grained than this general code.

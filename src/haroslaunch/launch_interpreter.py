@@ -408,7 +408,10 @@ class LaunchInterpreter(object):
                 value = ResolvedYaml(value if value is not None else {})
         assert value is not None
         ns = _rosname_string(tag.resolve_ns(scope))
-        param = _rosname_string(tag.resolve_param(scope))
+        if filepath and not filepath.is_resolved:
+            param = '*'
+        else:
+            param = _rosname_string(tag.resolve_param(scope))
         if value.is_resolved:
             if not param and type(value.value) != dict:
                 raise SchemaError.missing_attr('param')

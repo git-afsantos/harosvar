@@ -386,8 +386,9 @@ def _replace_param_variables(param: RosParameter, args) -> RosParameter:
 
 def _links_from_node_data(node_data: Iterable[Node], node: RosNode) -> List[RosLink]:
     # fetch the corresponding node data
+    package, executable = _pkg_exe_nodelet(node)
     for datum in node_data:
-        if datum.package == node.package and datum.executable == node.executable:
+        if datum.package == package and datum.executable == executable:
             break
     else:
         return []  # not found
@@ -412,6 +413,27 @@ def _links_from_node_data(node_data: Iterable[Node], node: RosNode) -> List[RosL
     for call in datum.param_set_calls:
         pass
     return links
+
+
+def _pkg_exe_nodelet(node: RosNode):
+    if node.package != 'nodelet' or node.executable != 'nodelet':
+        return (node.package, node.executable)
+    if not node.args.is_resolved:
+        # contains UnknownValue; command, nodelet or manager are unknown
+        return (node.package, node.executable)
+    if not node.args.value:
+        # this should be an error; nodelet requires arguments
+        return (node.package, node.executable)
+    args: List[str] = node.args.value.strip().split()
+    assert len(args) > 0
+    # 'manager', 'unload' and 'standalone' do not matter here
+    if args[0] == 'load':
+        # load pkg/type manager
+        if len(args) < 3:
+            # this should be an error
+            return (node.package, node.executable)
+        return tuple(args[1].split('/', maxsplit=1))
+    return (node.package, node.executable)
 
 
 def _get_final_names(ns, pns, remaps, condition, call):

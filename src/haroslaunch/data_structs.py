@@ -70,6 +70,9 @@ UnknownValue.to_JSON_object = _uv_to_JSON
 
 def _unknown_value_from_json(*args):
     data = args[-1]
+    assert 'cmd' in data, str(data)
+    assert 'args' in data, str(data)
+    assert 'text' in data, str(data)
     return UnknownValue(data['cmd'], tuple(data['args']), data['text'])
 
 
@@ -122,7 +125,8 @@ def _solver_result_from_json(*args):
     var_type = data['var_type']
     is_resolved = data['is_resolved']
     value = data['value']
-    if isinstance(value, list):
+    if not is_resolved:
+        assert isinstance(value, list)
         value = list(value)
         for i in range(len(value)):
             if not isinstance(value[i], str):

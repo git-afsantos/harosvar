@@ -253,7 +253,7 @@ def _load_project_nodes(root):
         package = item['package']
         nodes.append(Node(
             package,
-            item['name'],
+            item['nodelet'] or item['name'],
             files=[FileId(f'{package}/{fp}') for fp in item['files']],
             advertise_calls=item['advertise'],
             subscribe_calls=item['subscribe'],
@@ -307,8 +307,8 @@ def _old_nodes(cg):
             datum = _old_node_datum(uid, name, node)
             data[name] = datum
             if name in conflicts:
-                n = len(conflicts[name]) - 1
-                datum['warnings'].append(f'Name clashes with {n} other nodes.')
+                n = len(conflicts[name])
+                datum['warnings'].append(f'There are {n} nodes with this name.')
         datum['conditions'] = datum['conditions'].disjoin(node.condition)
     for datum in data.values():
         datum['conditions'] = _old_conditions(datum['conditions'])

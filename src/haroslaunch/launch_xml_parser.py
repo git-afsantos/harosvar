@@ -965,7 +965,10 @@ def parse_from_file(filepath):
     else:
         with open(filepath, 'r') as fh:
             xml_code = fh.read()
-    return parse(xml_code)
+    try:
+        return parse(xml_code)
+    except LaunchParserError as e:
+        raise LaunchParserError(f'in file {filepath}: {e}', e)
 
 
 def parse(xml_text):
