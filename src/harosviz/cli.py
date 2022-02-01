@@ -28,6 +28,7 @@ import sys
 
 from bottle import request, route, run, static_file
 from haroslaunch.data_structs import SolverResult
+from haroslaunch.logic import LogicValue
 from harosvar.model import FileId, Node, ProjectModel
 from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
@@ -308,6 +309,9 @@ def _old_nodes(cg):
             if name in conflicts:
                 n = len(conflicts[name]) - 1
                 datum['warnings'].append(f'Name clashes with {n} other nodes.')
+        datum['conditions'] = datum['conditions'].disjoin(node.condition)
+    for datum in data.values():
+        datum['conditions'] = _old_conditions(datum['conditions'])
     return data
 
 
@@ -323,7 +327,7 @@ def _old_node_datum(uid, name, node):
         # 'clients': [],
         # 'reads': [],
         # 'writes': [],
-        'conditions': _old_conditions(node.condition),
+        'conditions': LogicValue.F,
         'traceability': [_old_traceability(node.traceability)],
         'warnings': [],
     }
@@ -361,7 +365,7 @@ def _old_topics(cg):
                 'types': [link.data_type],
                 'publishers': [],
                 'subscribers': [],
-                'conditions': [],
+                'conditions': LogicValue.F,
                 'traceability': [],
                 'warnings': [],
             }
@@ -373,10 +377,11 @@ def _old_topics(cg):
             datum['subscribers'].append(node)
         else:
             datum['publishers'].append(node)
-        datum['conditions'].extend(_old_conditions(link.condition))
+        datum['conditions'] = datum['conditions'].disjoin(link.condition)
         datum['traceability'].append(dict(link.attributes['location']))
         # datum['warnings'].extend(link.attributes['warnings'])
     for datum in data.values():
+        datum['conditions'] = _old_conditions(datum['conditions'])
         if len(datum['types']) > 1:
             datum['warnings'].append('Conflicting message types.')
         # remove traceability duplicates
@@ -389,14 +394,15 @@ def _old_topics(cg):
             else:
                 s.add(location)
         # remove condition duplicates
-        s = set()
         conditions = datum['conditions']
-        for i in range(len(conditions) - 1, -1, -1):
-            c = str(conditions[i])
-            if c in s:
-                del conditions[i]
-            else:
-                s.add(c)
+        if isinstance(conditions, list):
+            s = set()
+            for i in range(len(conditions) - 1, -1, -1):
+                c = str(conditions[i])
+                if c in s:
+                    del conditions[i]
+                else:
+                    s.add(c)
     return data
 
 
@@ -425,7 +431,9 @@ def _old_publishers(cg, nodes, topics):
         node = nodes[link.node.replace('*', '?')]
         topic = topics[link.resource]
         conditions = _old_conditions(link.condition)
-        conditions.extend(link.attributes['conditions'])
+        if link.attributes['conditions']:
+            conditions = ['and', conditions]
+            conditions.extend(link.attributes['conditions'])
         data.append({
             'node': node['name'],
             'topic': topic['name'],
@@ -451,7 +459,9 @@ def _old_subscribers(cg, nodes, topics):
         node = nodes[link.node.replace('*', '?')]
         topic = topics[link.resource]
         conditions = _old_conditions(link.condition)
-        conditions.extend(link.attributes['conditions'])
+        if link.attributes['conditions']:
+            conditions = ['and', conditions]
+            conditions.extend(link.attributes['conditions'])
         data.append({
             'node': node['name'],
             'topic': topic['name'],
@@ -467,40 +477,32 @@ def _old_subscribers(cg, nodes, topics):
 
 
 def _old_conditions(condition):
+    if condition.is_true:
+        return True
+    if condition.is_false:
+        return False
     if condition.is_or:
-        condition = condition.operands[0]  # FIXME
+        return ['or'] + list(map(_old_conditions, condition.operands))
     if condition.is_and:
-        parts = condition.operands
-    else:
-        parts = [condition]
-    result = []
-    for part in parts:
-        negate = False
-        if part.is_not:
-            part = part.operand
-            negate = True
-        if not part.is_variable:
-            continue
-        if isinstance(part.data, str):
-            # ad hoc variable created with feature model
-            result.append({
-                'condition': part.data,
-                'statement': 'roslaunch',
-                'location': _old_traceability(None),
-            })
-        else:
-            # part.data: SourceCondition
-            # part.data.value: SolverResult
-            statement = part.data['statement']
-            if negate:
-                statement = 'unless' if statement == 'if' else 'if'
-            value = SolverResult.from_json(part.data['value'])
-            result.append({
-                'condition': value.as_string(wildcard=None),
-                'statement': statement,
-                'location': _old_traceability(part.data['location']),
-            })
-    return result
+        return ['and'] + list(map(_old_conditions, condition.operands))
+    if condition.is_not:
+        return ['not', _old_conditions(condition.operand)]
+    assert condition.is_variable
+    if isinstance(condition.data, str):
+        # ad hoc variable created with feature model
+        return {
+            'condition': condition.data,
+            'statement': 'roslaunch',
+            'location': _old_traceability(None),
+        }
+    # part.data: SourceCondition
+    # part.data.value: SolverResult
+    value = SolverResult.from_json(condition.data['value'])
+    return {
+        'condition': value.as_string(wildcard=None),
+        'statement': condition.data['statement'],
+        'location': _old_traceability(condition.data['location']),
+    }
 
 
 def _old_traceability(traceability):

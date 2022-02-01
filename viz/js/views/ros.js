@@ -362,39 +362,39 @@ THE SOFTWARE.
         addPublisher: function (link) {
             var topic = this.topics[link.topic_uid];
             topic.get("types")[link.type] = true;
-            this._addEdge(this.nodes[link.node_uid].id, topic.id, !!link.conditions.length);
+            this._addEdge(this.nodes[link.node_uid].id, topic.id, link.conditions !== true);
         },
 
         addSubscriber: function (link) {
             var topic = this.topics[link.topic_uid];
             topic.get("types")[link.type] = true;
-            this._addEdge(topic.id, this.nodes[link.node_uid].id, !!link.conditions.length);
+            this._addEdge(topic.id, this.nodes[link.node_uid].id, link.conditions !== true);
         },
 
         addClient: function (link) {
             var service = this.services[link.service_uid];
             service.get("types")[link.type] = true;
-            this._addEdge(this.nodes[link.node_uid].id, service.id, !!link.conditions.length);
+            this._addEdge(this.nodes[link.node_uid].id, service.id, link.conditions !== true);
         },
 
         addServer: function (link) {
             var service = this.services[link.service_uid];
             service.get("types")[link.type] = true;
-            this._addEdge(service.id, this.nodes[link.node_uid].id, !!link.conditions.length);
+            this._addEdge(service.id, this.nodes[link.node_uid].id, link.conditions !== true);
         },
 
         addWrite: function (link) {
             var param = this.params[link.param_uid];
             if (link.type != null)
                 param.get("types")[link.type] = true;
-            this._addEdge(this.nodes[link.node_uid].id, param.id, !!link.conditions.length);
+            this._addEdge(this.nodes[link.node_uid].id, param.id, link.conditions !== true);
         },
 
         addRead: function (link) {
             var param = this.params[link.param_uid];
             if (link.type != null)
                 param.get("types")[link.type] = true;
-            this._addEdge(param.id, this.nodes[link.node_uid].id, !!link.conditions.length);
+            this._addEdge(param.id, this.nodes[link.node_uid].id, link.conditions !== true);
         },
 
         _addEdge: function (sourceCid, targetCid, conditional) {
@@ -674,7 +674,7 @@ THE SOFTWARE.
             _.bindAll(this, "onClick", "onDrag", "onDragStart", "onDragEnd");
             this.label = this.model.get("name");
             this.visible = false;
-            this.conditional = !!(this.model.get("conditions").length);
+            this.conditional = this.model.get("conditions") !== true;
             this.queries = {};
 
             this.d3g = d3.select(this.el).attr("class", "node").on("click", this.onClick);
@@ -755,8 +755,37 @@ THE SOFTWARE.
             if (data.types != null) {
                 data.type = Object.keys(data.types).join(", ");
             }
+            if (data.conditions === true) {
+              data.conditions = null;
+            } else {
+              data.conditions = this.conditionToString(data.conditions, false, 0);
+            }
             this.$content.html(this.template(data));
             return this;
+        },
+
+        conditionToString: function (c, parentheses, indent) {
+          if (c == null) { c = true; }
+          if (c === true || c === false) {
+            return `<span class="code">${c}</span>`;
+          }
+          if (Array.isArray(c)) {
+            let op = c[0];
+            if (op == "and") { op = "∧"; }
+            else if (op == "or") { op = "∨"; }
+            else if (op == "not") { op = "¬"; }
+            if (indent == null) { indent = 0; }
+            const args = [];
+            for (let i = 1; i < c.length; ++i) {
+              args.push(this.conditionToString(c[i], true, indent + 1));
+            }
+            const ws = `&nbsp;`.repeat(indent * 2);
+            let s = args.join(`<br/>${ws}<b>${op}</b> `);
+            if (parentheses) { return `(${s})`; }
+            return s;
+          }
+          console.assert(typeof c === "object", "expected a condition object");
+          return `<span class="code">${c.statement} ${c.condition}</span>`;
         }
     });
 
@@ -852,8 +881,10 @@ THE SOFTWARE.
         },
 
         setProjectId: function (projectId) {
-            this.featureModel.projectId = projectId;
-            this.featureModel.fetch();
+          if (this.featureModel.projectId != projectId) {
+          }
+          this.featureModel.projectId = projectId;
+          this.featureModel.fetch();
         },
 
         onResize: function () {

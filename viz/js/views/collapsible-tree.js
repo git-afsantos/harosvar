@@ -486,16 +486,7 @@ class MyTree {
         this.tree = d3.tree().size([this.width, this.height]);
         this.tree.nodeSize([0, NODE_SIZE]);
         this.root = this.tree(d3.hierarchy(data));
-        this.root.each((d) => {
-            d.name = d.id; //transferring name to a name variable
-            d.id = this.i; //Assigning numerical Ids
-            this.i++;
-            d.ui = {
-                name: d.data.name,
-                selected: d.data.selected
-            };
-            d.issues = [];
-        });
+        this.root.each(d => this.initDataNode(d));
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
 
@@ -520,19 +511,24 @@ class MyTree {
     }
 
     syncModelData(data) {
-        console.log('sync model data');
-
         this.i = 0;
         this.root = this.tree(d3.hierarchy(data));
-        this.root.each((d) => {
-            d.name = d.id; //transferring name to a name variable
-            d.id = this.i; //Assigning numerical Ids
-            this.i++;
-        });
+        this.root.each(d => this.initDataNode(d));
         this.root.x0 = this.root.x;
         this.root.y0 = this.root.y;
 
         this.update(this.root);
         this.render();
+    }
+
+    initDataNode(d) {
+      d.name = d.id; // transfer name to a name variable
+      d.id = this.i; // assign numerical ids
+      this.i++;
+      d.ui = {
+          name: d.data.name,
+          selected: d.data.selected
+      };
+      d.issues = [];
     }
 };
