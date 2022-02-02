@@ -7,7 +7,7 @@
 
 from typing import Any, Dict, Final, Iterable, List, Mapping
 
-from haroslaunch.data_structs import ResolvedValue, SolverResult
+from haroslaunch.data_structs import ResolvedString, ResolvedValue, SolverResult
 from haroslaunch.launch_interpreter import LaunchInterpreter
 from haroslaunch.logic import LogicValue, LogicVariable
 from haroslaunch.metamodel import RosName, RosNode, RosParameter, RosResource
@@ -217,6 +217,14 @@ def _interpret_launch_files(model: ProjectModel, ws: fsys.Workspace) -> LFIDict:
             root, launch_file = ws.split_package(lfi.included_files[i], native=False)
             if root:
                 lfi.included_files[i] = launch_file
+        # fix: replace absolute paths in `lfi.includes` with FileId
+        for i in range(len(lfi.includes)):
+            feature = lfi.includes[i]
+            if not feature.file.is_resolved:
+                continue
+            root, launch_file = ws.split_package(feature.file.value, native=False)
+            if root:
+                lfi.includes[i] = feature._replace(file=launch_file)
     return interpreters
 
 

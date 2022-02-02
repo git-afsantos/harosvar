@@ -138,6 +138,11 @@ _RosparamDelete.cmd = 'delete'
 _RosparamDump = namedtuple('RosparamDump', ('filepath', 'ns', 'param', 'condition'))
 _RosparamDump.cmd = 'dump'
 
+_IncludeFeature = namedtuple('IncludeFeature', (
+    'file',       # SolverResult
+    'args',       # Dict[str, str]
+    'condition',  # LogicValue
+))
 
 class LaunchInterpreter(object):
     def __init__(self, iface, include_absent=False, follow_includes=True, allow_missing_files=False):
@@ -153,6 +158,7 @@ class LaunchInterpreter(object):
         self.cmd_line_args = []  # [(file, {arg -> default})]
         self.included_files = []
         self.missing_includes = [] # List[Tuple[SolverResult, LogicValue]]
+        self.includes = []  # List[IncludeFeature]
 
     def to_JSON_object(self):
         return {
@@ -439,6 +445,9 @@ class LaunchInterpreter(object):
 
     def _include_tag(self, tag, scope, condition):
         result = tag.resolve_file(scope)
+        feature = _IncludeFeature(result, {}, condition)
+        self.includes.append(feature)
+        # FIXME some of the stuff below needs to go into the feature
         if not self.follow_includes:
             self.missing_includes.append((result, condition))
         else:
@@ -456,6 +465,7 @@ class LaunchInterpreter(object):
             if clear:
                 self._clear_params(new_scope.ns)
             self._interpret_tree(tag, new_scope)
+            feature.args.update(new_scope.passed_args)
             new_scope = new_scope.new_launch()
             self.included_files.append(new_scope.filepath)
             tree = self.iface.request_parse_tree(filepath)  # !!
