@@ -34,7 +34,8 @@ THE SOFTWARE.
         events: {
             "click #ros-config-issues":  "goToIssues",
             "change #ros-config-select": "onSelect",
-            "change #ros-query-select": "onQuerySelect"
+            "change #ros-query-select": "onQuerySelect",
+            "click #ros-graph-btn-toggle-query": "onToggleQueryInput"
         },
 
         initialize: function (options) {
@@ -53,6 +54,7 @@ THE SOFTWARE.
 
             this.listenTo(this.collection, "sync", this.onSync);
             this.listenTo(this.systemView, "calculate", this.onCalculateCG);
+            this.listenTo(this.graph, "query", this.onQueryInput);
         },
 
         render: function () {
@@ -132,6 +134,14 @@ THE SOFTWARE.
             this.graph.onResize(offsetY);
         },
 
+        onToggleQueryInput: function () {
+          this.graph.onToggleQueryInput();
+        },
+
+        onQueryInput: function (query) {
+          ; // TODO
+        },
+
         optionTemplate: _.template("<option><%= data.id %></option>",
                                    {variable: "data"}),
 
@@ -153,7 +163,8 @@ THE SOFTWARE.
             "click #config-btn-param":      "onToggleParams",
             "click #config-btn-names":      "onToggleNames",
             "click #config-btn-focus":      "onFocus",
-            "click #config-btn-info":       "onInfo"
+            "click #config-btn-info":       "onInfo",
+            "keydown #config-graph-query-input": "onQueryEntered"
         },
 
         initialize: function () {
@@ -182,6 +193,11 @@ THE SOFTWARE.
 
             this.$nodeActionBar = this.$("#config-node-action-bar");
             this.$nodeActionBar.hide();
+
+            this.queryInputVisible = false;
+            this.$queryInputBar = this.$(".query-input");
+            this.$queryInputBar.hide();
+            this.$queryInputField = this.$("#config-graph-query-input");
 
             this.infoView = new views.NodeInfo({ el: this.$("#config-info-modal") });
             this.infoView.hide();
@@ -620,6 +636,24 @@ THE SOFTWARE.
             }
         },
 
+
+        onToggleQueryInput: function () {
+          this.queryInputVisible = !this.queryInputVisible;
+          if (this.queryInputVisible) {
+            this.$queryInputBar.show();
+          } else {
+            this.$queryInputBar.hide();
+          }
+        },
+
+        onQueryEntered: function (e) {
+          if (e.which == 13) { // enter key
+            this.trigger("query", this.$queryInputField.val());
+          } else if (e.key === "Escape" || e.key === "Esc") {
+            this.queryInputVisible = false;
+            this.$queryInputBar.hide();
+          }
+        },
 
         onInfo: function () {
             if (this.selection == null) return;

@@ -248,7 +248,10 @@
             <h4 class="flexible margin-left">
               <i class="fa fa-cogs"></i> Computation Graph
             </h4>
-            <button type="button" class="flex-fixed-size" title="Reset Zoom">
+            <button type="button" id="ros-graph-btn-toggle-query" class="flex-fixed-size" title="Query">
+              <i class="fa fa-question"></i>
+            </button>
+            <button type="button" class="flex-fixed-size margin-left-sm" title="Reset Zoom">
               <i class="fa fa-search"></i>
             </button>
             <button type="button" class="flex-fixed-size margin-left-sm" title="Enable/Disable Dragging">
@@ -258,6 +261,10 @@
           <!-- end header -->
 
           <div id="config-graph" class="margin-h">
+            <div class="query-input">
+              <input id="config-graph-query-input" type="text" placeholder="computation graph query" autocomplete="off">
+            </div>
+
             <div id="config-graph-action-bar" class="action-bar"><!--
               --><button type="button" id="config-btn-viewport" title="Reset Zoom"><i class="fa fa-sitemap"></i></button><!--
               --><button type="button" id="config-btn-drag" title="Enable/Disable Dragging"><i class="fa fa-hand-rock-o"></i></button><!--

@@ -951,3 +951,21 @@ select {
 #ros-system-view button {
   min-width: 2em;
 }
+
+
+#ros-graph-view-header > button {
+  min-width: 1.75em;
+}
+
+#config-graph > .query-input {
+    position: absolute;
+    top: auto;
+    bottom: 1em;
+    right: 1em;
+    left: 1em;
+    display: flex;
+}
+
+.query-input > input {
+  flex-grow: 1;
+}
