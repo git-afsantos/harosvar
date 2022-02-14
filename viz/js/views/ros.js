@@ -139,7 +139,17 @@ THE SOFTWARE.
         },
 
         onQueryInput: function (query) {
-          ; // TODO
+          fetch("/cg/query", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({"query": query})
+          })
+          .then(response => response.json())
+          .then(data => {
+            this.graph.forgetQuery(data.qid);
+            this.graph.mapQuery(data);
+            this.graph.setHighlights(data.qid);
+          });
         },
 
         optionTemplate: _.template("<option><%= data.id %></option>",
@@ -534,6 +544,11 @@ THE SOFTWARE.
                         break;
                 }
             }
+        },
+
+        forgetQuery: function (queryId) {
+          this.graph.nodes().forEach(v => this.graph.node(v).queries[queryId] = false);
+          this.graph.edges().forEach(e => this.graph.edge(e).queries[queryId] = false);
         },
 
         onZoom: function (event) {

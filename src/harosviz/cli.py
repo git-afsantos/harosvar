@@ -29,7 +29,7 @@ import sys
 from bottle import request, route, run, static_file
 from haroslaunch.data_structs import SolverResult
 from haroslaunch.logic import LogicValue
-from harosvar.model import FileId, Node, ProjectModel
+from harosvar.model import FileId, Node, ProjectModel, RosComputationGraph
 from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
 
@@ -133,6 +133,7 @@ def set_routes(root: str):
     route('/data/<project_id>/feature-model.json', method='GET')(get_feature_model)
     route('/data/<project_id>/feature-model.json', method='PUT')(_update_feature_model)
     route('/cg/calculate', method='POST')(calculate_computation_graph)
+    route('/cg/query', method='POST')(_query_computation_graph)
     route('/<filepath:path>')(serve_file)
 
 
@@ -141,6 +142,8 @@ def set_routes(root: str):
 ###############################################################################
 
 project_model: ProjectModel = None
+project_nodes: List[Any] = []
+current_cg: RosComputationGraph = None
 
 
 def _get_feature_model(root, project_id):
@@ -159,13 +162,30 @@ def _update_feature_model(project_id=None):
 
 
 def _calculate_computation_graph(root: str):
+    global current_cg
     data = request.json
     project_id = data['project']
     print(f'Calculate Computation Graph for project "{project_id}"')
     _load_project_model(root, project_id)
-    nodes = _load_project_nodes(root)
-    cg = build_computation_graph_adhoc(project_model, data, nodes)
-    return _cg_to_old_format(cg)
+    current_cg = build_computation_graph_adhoc(project_model, data, project_nodes)
+    return _cg_to_old_format(current_cg)
+
+
+def _query_computation_graph():
+    if current_cg is None:
+        pass # error
+    return {
+        'qid': 'adhoc',
+        'objects': [
+            {
+                'resourceType': 'node',
+                'name': '/listener',
+                'uid': '140273413956112',
+            }
+        ],
+        'name': 'Match Multiple Times',
+        'rule': 'user:match_multiple_times',
+    }
 
 
 ###############################################################################
@@ -239,10 +259,21 @@ def _viz_arg_value_json(value):
 
 def _load_project_model(root, project_id):
     global project_model
+    global project_nodes
+    global current_cg
     if project_model is None or project_model.name != project_id:
         path = Path(root).resolve() / 'data' / project_id / 'model.json'
         data = json.loads(path.read_text(encoding='utf-8'))
         project_model = ProjectModel.from_json(data)
+        project_nodes = _load_project_nodes(root)
+        # selection = {
+        #     'project': project_id,
+        #     'launch': [],
+        #     'discard': [],
+        # }
+        # nodes = _load_project_nodes(root)
+        # current_cg = build_computation_graph_adhoc(project_model, selection, nodes)
+        current_cg = None
 
 
 def _load_project_nodes(root):
