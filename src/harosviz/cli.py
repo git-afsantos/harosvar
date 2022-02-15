@@ -110,7 +110,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     if not path.is_dir():
         raise ValueError(f'"{root}" is not a directory')
 
-    set_routes(str(path))
+    set_routes(str(path), configs)
     run(host='localhost', port=8080)
 
 
@@ -119,7 +119,9 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 ###############################################################################
 
 
-def set_routes(root: str):
+def set_routes(root: str, configs: Dict[str, Any]):
+    logger = configs['logger']
+
     def serve_file(filepath):
         return static_file(filepath, root=root)
 
@@ -129,11 +131,14 @@ def set_routes(root: str):
     def calculate_computation_graph():
         return _calculate_computation_graph(root)
 
+    def query_computation_graph():
+        return _query_computation_graph(root, logger)
+
     route('/')(lambda: serve_file('index.html'))
     route('/data/<project_id>/feature-model.json', method='GET')(get_feature_model)
     route('/data/<project_id>/feature-model.json', method='PUT')(_update_feature_model)
     route('/cg/calculate', method='POST')(calculate_computation_graph)
-    route('/cg/query', method='POST')(_query_computation_graph)
+    route('/cg/query', method='POST')(query_computation_graph)
     route('/<filepath:path>')(serve_file)
 
 
@@ -144,6 +149,7 @@ def set_routes(root: str):
 project_model: ProjectModel = None
 project_nodes: List[Any] = []
 current_cg: RosComputationGraph = None
+query_engine = None
 
 
 def _get_feature_model(root, project_id):
@@ -171,21 +177,29 @@ def _calculate_computation_graph(root: str):
     return _cg_to_old_format(current_cg)
 
 
-def _query_computation_graph():
+def _query_computation_graph(root: str, logger):
     if current_cg is None:
-        pass # error
-    return {
-        'qid': 'adhoc',
-        'objects': [
-            {
-                'resourceType': 'node',
-                'name': '/listener',
-                'uid': '140273413956112',
-            }
-        ],
-        'name': 'Match Multiple Times',
-        'rule': 'user:match_multiple_times',
-    }
+        return {'error': 'Must calculate CG first.'}
+
+    global query_engine
+    if query_engine is None:
+        try:
+            from harosviz.query_engine import QueryEngine
+        except ImportError as e:
+            return {'error': f'Unable to import query engine: {e}'}
+        temp_dir = Path(root).resolve() / 'data'
+        query_engine = QueryEngine(str(temp_dir))
+
+    data = request.json
+    try:
+        result, resources = query_engine.execute(data['query'], current_cg)
+    except Exception as e:
+        logger.exception(e)
+        print(f'Error executing {data}: {e}')
+        return {'error': str(e)}
+    response = _old_query_results(current_cg, result, resources)
+    logger.debug(f'Query response:\n{response}')
+    return response
 
 
 ###############################################################################
@@ -328,14 +342,11 @@ def _cg_to_old_format(cg):
 def _old_nodes(cg):
     data = {}
     conflicts = cg.node_conflicts()
-    i = 1
     for node in cg.nodes:
         name = node.name.full.replace('*', '?')
         datum = data.get(name)
         if datum is None:
-            uid = f'node#{i}'
-            i += 1
-            datum = _old_node_datum(uid, name, node)
+            datum = _old_node_datum(name, node)
             data[name] = datum
             if name in conflicts:
                 n = len(conflicts[name])
@@ -346,9 +357,9 @@ def _old_nodes(cg):
     return data
 
 
-def _old_node_datum(uid, name, node):
+def _old_node_datum(name, node):
     datum = {
-        'uid': uid,
+        'uid': node.attributes['uid'],
         'name': name,
         'type': f'{node.package}/{node.executable}',
         'args': node.args.as_string(),
@@ -367,9 +378,10 @@ def _old_node_datum(uid, name, node):
 
 def _old_parameters(cg):
     data = []
+    i = 1
     for param in cg.parameters:
         data.append({
-            'uid': str(id(param)),
+            'uid': param.attributes['uid'],
             'name': str(param.name).replace('*', '?'),
             'type': param.param_type,
             'value': param.value if param.value.is_resolved else param.value.as_string(),
@@ -379,6 +391,7 @@ def _old_parameters(cg):
             'traceability': [_old_traceability(param.traceability)],
             'warnings': [],
         })
+        i += 1
     return data
 
 
@@ -466,6 +479,7 @@ def _old_publishers(cg, nodes, topics):
             conditions = ['and', conditions]
             conditions.extend(link.attributes['conditions'])
         data.append({
+            'uid': link.attributes['uid'],
             'node': node['name'],
             'topic': topic['name'],
             'type': link.data_type,
@@ -494,6 +508,7 @@ def _old_subscribers(cg, nodes, topics):
             conditions = ['and', conditions]
             conditions.extend(link.attributes['conditions'])
         data.append({
+            'uid': link.attributes['uid'],
             'node': node['name'],
             'topic': topic['name'],
             'type': link.data_type,
@@ -559,6 +574,16 @@ def _old_traceability(traceability):
         }
 
 
+def _old_query_results(cg, result, resources):
+    return {
+        'qid': 'adhoc',
+        'objects': resources,
+        'name': 'Interactive Query',
+        'rule': 'user:interactive_query',
+        'result': str(result),
+    }
+
+
 ###############################################################################
 # Entry Point
 ###############################################################################
@@ -574,6 +599,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         logging.basicConfig(level=logging.DEBUG)
         logger = logging.getLogger(__name__)
+        config['logger'] = logger
 
         if not shortcircuit(args):
             workflow(args, config)

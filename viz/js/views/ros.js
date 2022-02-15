@@ -139,6 +139,10 @@ THE SOFTWARE.
         },
 
         onQueryInput: function (query) {
+          if (!query) {
+            this.graph.setHighlights(null);
+            return;
+          }
           fetch("/cg/query", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -146,9 +150,13 @@ THE SOFTWARE.
           })
           .then(response => response.json())
           .then(data => {
-            this.graph.forgetQuery(data.qid);
-            this.graph.mapQuery(data);
-            this.graph.setHighlights(data.qid);
+            if (data.error) {
+              alert(`Error: ${data.error}`);
+            } else {
+              this.graph.forgetQuery(data.qid);
+              this.graph.mapQuery(data);
+              this.graph.setHighlights(data.qid);
+            }
           });
         },
 
@@ -523,23 +531,32 @@ THE SOFTWARE.
                 obj = objs[i];
                 switch (obj.resourceType) {
                     case "node":
-                        this.graph.node(this.nodes[obj.uid].id).queries[query.qid] = true;
+                        v = this.nodes[obj.uid];
+                        if (v == null) continue;
+                        this.graph.node(v.id).queries[query.qid] = true;
                         break;
                     case "topic":
-                        this.graph.node(this.topics[obj.uid].id).queries[query.qid] = true;
+                        v = this.topics[obj.uid];
+                        if (v == null) continue;
+                        this.graph.node(v.id).queries[query.qid] = true;
                         break;
                     case "service":
-                        this.graph.node(this.services[obj.uid].id).queries[query.qid] = true;
+                        v = this.services[obj.uid];
+                        if (v == null) continue;
+                        this.graph.node(v.id).queries[query.qid] = true;
                         break;
                     case "param":
-                        this.graph.node(this.params[obj.uid].id).queries[query.qid] = true;
+                        v = this.params[obj.uid];
+                        if (v == null) continue;
+                        this.graph.node(v.id).queries[query.qid] = true;
                         break;
                     case "link":
-                        n1 = this.nodes[obj.node_uid].id;
+                        n1 = this.nodes[obj.node_uid];
                         n2 = (this.topics[obj.topic_uid]
                               || this.services[obj.service_uid]
-                              || this.params[obj.param_uid]).id;
-                        v = this.graph.edge(n1, n2) || this.graph.edge(n2, n1);
+                              || this.params[obj.param_uid]);
+                        if (n1 == null || n2 == null) continue;
+                        v = this.graph.edge(n1.id, n2.id) || this.graph.edge(n2.id, n1.id);
                         v.queries[query.qid] = true;
                         break;
                 }
@@ -658,6 +675,7 @@ THE SOFTWARE.
             this.$queryInputBar.show();
           } else {
             this.$queryInputBar.hide();
+            this.setHighlights(null);
           }
         },
 

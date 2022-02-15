@@ -114,6 +114,7 @@ def build_computation_graph_adhoc(model: ProjectModel, selection, node_data) -> 
             param = param.clone()
             param.condition = param.condition.join(var)
             cg.parameters.append(param)
+    _assign_cg_uids(cg)
     return cg
 
 
@@ -279,6 +280,30 @@ def _file_conflicts(model: LaunchFeatureModel, cd: ana.CompatibilityDict):
 ###############################################################################
 # Helper Functions - Systems
 ###############################################################################
+
+
+def _assign_cg_uids(cg: RosComputationGraph):
+    for i in range(len(cg.nodes)):
+        cg.nodes[i].attributes['uid'] = f'node#{i + 1}'
+    for i in range(len(cg.parameters)):
+        cg.parameters[i].attributes['uid'] = f'param#{i + 1}'
+    topics = {}
+    services = {}
+    params = {}
+    for i in range(len(cg.links)):
+        link = cg.links[i]
+        link.attributes['uid'] = f'link#{i + 1}'
+        node = cg.find_node(link.node)
+        link.attributes['node_uid'] = node.attributes['uid']
+        if link.resource_type == 'topic':
+            uid = topics.setdefault(link.resource, f'topic#{len(topics) + 1}')
+            link.attributes['topic_uid'] = uid
+        elif link.resource_type == 'service':
+            uid = services.setdefault(link.resource, f'service#{len(services) + 1}')
+            link.attributes['service_uid'] = uid
+        elif link.resource_type == 'param':
+            uid = params.setdefault(link.resource, f'topic#{len(params) + 1}')
+            link.attributes['param_uid'] = uid
 
 
 def _build_singleton_systems(

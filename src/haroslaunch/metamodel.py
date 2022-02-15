@@ -266,6 +266,7 @@ class RosResource(RosRuntimeEntity):
         'system',  # None | string
         'condition',  # LogicValue
         'traceability',  # None | SourceLocation
+        'attributes', # Dict[str, Any]
     )
 
     def __init__(self, name, system=None, condition=None, location=None):
@@ -273,6 +274,7 @@ class RosResource(RosRuntimeEntity):
         self.system = system
         self.condition = condition or LOGIC_TRUE
         self.traceability = location
+        self.attributes = {}
 
     @property
     def namespace(self):

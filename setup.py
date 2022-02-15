@@ -77,6 +77,7 @@ setup(
     install_requires=['attrs>=20', 'pyyaml', 'bottle'],
     extras_require={
         'dev': ['pytest', 'tox', 'hypothesis'],
+        'queries': ['pyflwor_ext>=1.2'],
     },
     zip_safe=False,
     project_urls={

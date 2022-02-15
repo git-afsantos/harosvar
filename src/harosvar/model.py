@@ -10,7 +10,7 @@ from typing import Any, Dict, Final, List, NewType, Optional, Set, Tuple
 import attr
 from haroslaunch.data_structs import SolverResult
 from haroslaunch.logic import LogicValue
-from haroslaunch.metamodel import RosNode, RosParameter, RosResource
+from haroslaunch.metamodel import RosName, RosNode, RosParameter, RosResource
 
 ###############################################################################
 # Constants
@@ -226,7 +226,8 @@ class RosSystem:
         return cls(uid, name)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+# TODO frozen generates hash that is incompatible with mutable list and dict
+@attr.s(auto_attribs=True, slots=True, frozen=False, eq=False)
 class RosLink:
     node: str
     resource: str
@@ -235,6 +236,38 @@ class RosLink:
     inbound: bool = True
     condition: LogicValue = LogicValue.T
     attributes: Dict[str, Any] = attr.Factory(dict)
+
+    def __eq__(self, other):
+        if not isinstance(other, RosLink):
+            return False
+        return (self.node == other.node
+                and self.resource == other.resource
+                and self.resource_type == other.resource_type
+                and self.data_type == other.data_type
+                and self.inbound == other.inbound)
+
+    def __hash__(self):
+        return hash((self.node, self.resource, self.resource_type,
+                self.data_type, self.inbound))
+
+
+# TODO frozen generates hash that is incompatible with mutable list and dict
+@attr.s(auto_attribs=True, slots=True, frozen=False, eq=False)
+class RosTopic:
+    name: RosName
+    data_types: List[str] = attr.Factory(list)
+    condition: LogicValue = LogicValue.T
+    publishers: List[str] = attr.Factory(list)
+    subscribers: List[str] = attr.Factory(list)
+    attributes: Dict[str, Any] = attr.Factory(dict)
+
+    def __eq__(self, other):
+        if not isinstance(other, RosTopic):
+            return False
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -249,6 +282,35 @@ class RosComputationGraph:
 
     def param_conflicts(self) -> Dict[str, List[RosParameter]]:
         return self._resource_conflicts(self.parameters)
+
+    def get_topics(self) -> List[RosTopic]:
+        items = {}
+        for link in self.links:
+            if link.resource_type != 'topic':
+                continue
+            name = link.resource
+            item = items.get(name)
+            if item is None:
+                item = RosTopic(RosName(name))
+                item.attributes['uid'] = f'topic#{len(items) + 1}'
+                item.attributes['traceability'] = []
+                items[name] = item
+            if link.data_type not in item.data_types:
+                item.data_types.append(link.data_type)
+            node = link.node.replace('*', '?')
+            if link.inbound:
+                item.subscribers.append(node)
+            else:
+                item.publishers.append(node)
+            object.__setattr__(item, 'condition', item.condition.disjoin(link.condition))
+            item.attributes['traceability'].append(dict(link.attributes['location']))
+        return list(items.values())
+
+    def find_node(self, name) -> Optional[RosNode]:
+        for node in self.nodes:
+            if str(node.name) == name:
+                return node
+        return None
 
     def _resource_conflicts(self, collection) -> Dict[str, List[RosResource]]:
         conflicts = {}

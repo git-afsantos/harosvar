@@ -968,4 +968,5 @@ select {
 
 .query-input > input {
   flex-grow: 1;
+  font-family: monospace;
 }
