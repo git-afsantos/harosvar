@@ -156,6 +156,12 @@ THE SOFTWARE.
               this.graph.forgetQuery(data.qid);
               this.graph.mapQuery(data);
               this.graph.setHighlights(data.qid);
+              console.log("Query finds some match if:");
+              console.log(data.condition);
+              const n = this.systemView.featureModel.nLaunchFiles();
+              const k = data.launch_files.length;
+              console.log(`Affected launch files (${k}/${n}):`);
+              console.log(data.launch_files);
             }
           });
         },

@@ -291,7 +291,7 @@ class RosComputationGraph:
             name = link.resource
             item = items.get(name)
             if item is None:
-                item = RosTopic(RosName(name))
+                item = RosTopic(RosName(name), condition=LogicValue.F)
                 item.attributes['uid'] = f'topic#{len(items) + 1}'
                 item.attributes['traceability'] = []
                 items[name] = item

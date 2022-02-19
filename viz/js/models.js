@@ -427,6 +427,10 @@ THE SOFTWARE.
     Models.FeatureModel = Backbone.Model.extend({
         url: function () {
             return "data/" + this.projectId + "/feature-model.json";
+        },
+
+        nLaunchFiles: function () {
+          return this.get("children").length;
         }
     });
 })();

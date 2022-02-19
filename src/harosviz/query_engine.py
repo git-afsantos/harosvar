@@ -57,6 +57,8 @@ class QueryEngine:
         resources = self._identify_resources(result)
         return result, resources
 
+    _RESOURCE_TYPES = (RosNode, RosParameter, RosTopic, RosLink)
+
     def _identify_resources(self, result):
         # result can be of types:
         # - pyflwor.OrderedSet.OrderedSet[Any] for Path queries
@@ -69,33 +71,8 @@ class QueryEngine:
                 resources.extend(self._identify_resources(match))
             elif isinstance(match, dict):
                 resources.extend(self._identify_resources(match.values()))
-            elif isinstance(match, RosNode):
-                resources.append({
-                    'resourceType': 'node',
-                    'name': str(match.name),
-                    'uid': match.attributes['uid'],
-                })
-            elif isinstance(match, RosParameter):
-                resources.append({
-                    'resourceType': 'param',
-                    'name': str(match.name),
-                    'uid': match.attributes['uid'],
-                })
-            elif isinstance(match, RosTopic):
-                resources.append({
-                    'resourceType': 'topic',
-                    'name': str(match.name),
-                    'uid': match.attributes['uid'],
-                })
-            elif isinstance(match, RosLink):
-                resources.append({
-                    'resourceType': 'link',
-                    'uid': match.attributes['uid'],
-                    'node_uid': match.attributes['node_uid'],
-                    'topic_uid': match.attributes.get('topic_uid'),
-                    'service_uid': match.attributes.get('service_uid'),
-                    'param_uid': match.attributes.get('param_uid'),
-                })
+            elif isinstance(match, self._RESOURCE_TYPES):
+                resources.append(match)
         return resources
 
 

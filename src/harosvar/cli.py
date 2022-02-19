@@ -23,6 +23,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import argparse
 import json
 import logging
+from math import comb
 from pathlib import Path
 import sys
 
@@ -126,6 +127,8 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(f'\nPackage {package.name}:')
         print(_bullets(package.files))
 
+    c = 0  # invalid pairings (subject to condition)
+    e = 0  # invalid pairings (always)
     for launch_file, feature_model in model.launch_files.items():
         print(f'\n> File: {launch_file}')
         print('\nCommand-line <arg>:')
@@ -138,23 +141,39 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(_bullets(_pretty_params(f.parameter for f in feature_model.parameters.values())))
         print('\nIncompatible files:')
         print(_bullets(list(feature_model.conflicts)))
+        for name, condition in feature_model.conflicts.items():
+            if not name.startswith('roslaunch:') or name == feature_model.name:
+                continue
+            if condition.is_false:
+                e += 1
+            elif not condition.is_true:
+                c += 1
 
-    print('\nSystems:')
-    print(_bullets(list(model.systems.values())))
+    n = len(model.launch_files)
+    p = comb(n, 2)
+    print('')
+    print(f'Number of launch files: {n}')
+    print(f'Number of launch file pairings: {p}')
+    print(f'Number of valid pairings: {p - (e + c)}')
+    print(f'Number of invalid pairings: {e}')
+    print(f'Number of conditional pairings: {c}')
 
-    model.systems['system#1'].launch_files[0].arguments['use_node2'] = 'true'
-    model.systems['system#1'].launch_files[0].arguments['node2_y'] = '42'
-    model.systems['system#3'].launch_files[0].arguments['worker_launch'] = 'c'
+    # print('\nSystems:')
+    # print(_bullets(list(model.systems.values())))
 
-    for system in model.systems.values():
-        cg = build_computation_graph(model, ws, system.uid)
-        print(f'\nSystem {system.name}')
-        print('\nNodes:')
-        print(_bullets(_pretty_nodes(cg.nodes)))
-        print('\nParams:')
-        print(_bullets(_pretty_params(cg.parameters)))
-        print('\nMissing includes:')
-        print(_bullets(_pretty_missing_includes(system.missing_files)))
+    # model.systems['system#1'].launch_files[0].arguments['use_node2'] = 'true'
+    # model.systems['system#1'].launch_files[0].arguments['node2_y'] = '42'
+    # model.systems['system#3'].launch_files[0].arguments['worker_launch'] = 'c'
+
+    # for system in model.systems.values():
+    #     cg = build_computation_graph(model, ws, system.uid)
+    #     print(f'\nSystem {system.name}')
+    #     print('\nNodes:')
+    #     print(_bullets(_pretty_nodes(cg.nodes)))
+    #     print('\nParams:')
+    #     print(_bullets(_pretty_params(cg.parameters)))
+    #     print('\nMissing includes:')
+    #     print(_bullets(_pretty_missing_includes(system.missing_files)))
 
     output_dir: Optional[str] = args['output_dir']
     if output_dir:

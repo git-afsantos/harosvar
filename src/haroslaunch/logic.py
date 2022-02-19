@@ -73,8 +73,7 @@ class LogicValue(object):
         return self
 
     def variables(self):
-        # iterator
-        return None
+        yield from ()
 
     def replace(self, valuation):
         # valuation is a Dict[str, bool] from variable names to boolean values

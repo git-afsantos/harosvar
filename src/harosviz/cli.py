@@ -29,7 +29,15 @@ import sys
 from bottle import request, route, run, static_file
 from haroslaunch.data_structs import SolverResult
 from haroslaunch.logic import LogicValue
-from harosvar.model import FileId, Node, ProjectModel, RosComputationGraph
+from haroslaunch.metamodel import RosNode, RosParameter
+from harosvar.model import (
+    FileId,
+    Node,
+    ProjectModel,
+    RosComputationGraph,
+    RosLink,
+    RosTopic,
+)
 from harosvar.model_builder import build_computation_graph_adhoc
 from harosviz import __version__ as current_version
 
@@ -575,12 +583,50 @@ def _old_traceability(traceability):
 
 
 def _old_query_results(cg, result, resources):
+    condition = LogicValue.F
+    objects = []
+    for resource in resources:
+        condition = condition.disjoin(resource.condition)
+        if isinstance(resource, RosNode):
+            objects.append({
+                'resourceType': 'node',
+                'name': str(resource.name),
+                'uid': resource.attributes['uid'],
+            })
+        elif isinstance(resource, RosParameter):
+            objects.append({
+                'resourceType': 'param',
+                'name': str(resource.name),
+                'uid': resource.attributes['uid'],
+            })
+        elif isinstance(resource, RosTopic):
+            objects.append({
+                'resourceType': 'topic',
+                'name': str(resource.name),
+                'uid': resource.attributes['uid'],
+            })
+        elif isinstance(resource, RosLink):
+            objects.append({
+                'resourceType': 'link',
+                'uid': resource.attributes['uid'],
+                'node_uid': resource.attributes['node_uid'],
+                'topic_uid': resource.attributes.get('topic_uid'),
+                'service_uid': resource.attributes.get('service_uid'),
+                'param_uid': resource.attributes.get('param_uid'),
+            })
+    launch_files = set()
+    for v in condition.variables():
+        if v.text.startswith('roslaunch '):
+            launch_files.add(v.data)
+    condition = condition.simplify()
     return {
         'qid': 'adhoc',
-        'objects': resources,
+        'objects': objects,
         'name': 'Interactive Query',
         'rule': 'user:interactive_query',
         'result': str(result),
+        'condition': condition.to_JSON_object(),
+        'launch_files': list(launch_files),
     }
 
 
