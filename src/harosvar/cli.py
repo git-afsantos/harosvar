@@ -128,6 +128,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(_bullets(package.files))
 
     a = 0  # command line arguments
+    ad = 0  # args with default value
     av = 0  # args with calculated values
     c = 0  # invalid pairings (subject to condition)
     e = 0  # invalid pairings (always)
@@ -137,6 +138,8 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(_bullets(list(feature_model.arguments.values())))
         for arg in feature_model.arguments.values():  # ArgFeature
             a += 1
+            if arg.default is not None:
+                ad += 1
             if arg.values:
                 av += 1
         print('\nList of <include> files:')
@@ -164,6 +167,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print(f'Number of invalid pairings: {e}')
     print(f'Number of conditional pairings: {c}')
     print(f'Number of command-line args: {a}')
+    print(f'Number of args with default values: {ad}')
     print(f'Number of args with computed values: {av}')
 
     # print('\nSystems:')
