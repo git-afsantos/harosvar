@@ -127,12 +127,14 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(f'\nPackage {package.name}:')
         print(_bullets(package.files))
 
+    a = 0  # command line arguments
     c = 0  # invalid pairings (subject to condition)
     e = 0  # invalid pairings (always)
     for launch_file, feature_model in model.launch_files.items():
         print(f'\n> File: {launch_file}')
         print('\nCommand-line <arg>:')
         print(_bullets(list(feature_model.arguments.values())))
+        a += len(feature_model.arguments)
         print('\nList of <include> files:')
         print(_bullets(list(feature_model.dependencies)))
         print('\nNodes:')
