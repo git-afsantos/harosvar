@@ -130,3 +130,9 @@ dmypy.json
 
 # harosviz data
 viz/data/
+
+# adhoc tests
+tests/filesystem_tests/ws/turtlebot/**/*
+tests/filesystem_tests/ws/lizi/**/*
+tests/filesystem_tests/ws/kobuki/**/*
+tests/filesystem_tests/ws/husky/**/*
